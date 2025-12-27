@@ -15,6 +15,7 @@ import {
   Edit,
 } from 'lucide-react';
 import { SelectFormData } from '../../types';
+import { supabase } from '../../lib/supabaseClient';
 
 const ONTARIO_CITIES = [
   'Toronto',
@@ -84,13 +85,18 @@ interface AgentMatchingFormProps {
 export default function AgentMatchingForm({ onComplete }: AgentMatchingFormProps) {
   const [formData, setFormData] = useState<SelectFormData>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [otp, setOtp] = useState<string>('');
+  const [otpSent, setOtpSent] = useState<boolean>(false);
+  const [otpVerified, setOtpVerified] = useState<boolean>(false);
+  const [otpLoading, setOtpLoading] = useState<'send' | 'verify' | null>(null);
+  const [otpError, setOtpError] = useState<string | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('agentMatchingForm');
     if (saved) {
       try {
         setFormData(JSON.parse(saved));
-      } catch (e) {
+      } catch {
         console.error('Failed to load saved form data');
       }
     }
@@ -101,6 +107,22 @@ export default function AgentMatchingForm({ onComplete }: AgentMatchingFormProps
       localStorage.setItem('agentMatchingForm', JSON.stringify(formData));
     }
   }, [formData]);
+
+  const phoneToE164 = (phone: string): string | null => {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length === 10) {
+      return `+1${digits}`;
+    }
+    return null;
+  };
+
+  const resetOtpState = () => {
+    setOtp('');
+    setOtpSent(false);
+    setOtpVerified(false);
+    setOtpLoading(null);
+    setOtpError(null);
+  };
 
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
@@ -114,6 +136,9 @@ export default function AgentMatchingForm({ onComplete }: AgentMatchingFormProps
       }
       if (!formData.aboutYou.phone || formData.aboutYou.phone.replace(/\D/g, '').length !== 10) {
         newErrors.phone = 'Please enter a valid 10-digit phone number';
+      }
+      if (!otpVerified) {
+        newErrors.phone = 'Please verify your phone number (OTP) before continuing';
       }
       if (formData.aboutYou.hasReferral && !formData.aboutYou.referralCode) {
         newErrors.referralCode = 'Please enter your referral code';
@@ -253,7 +278,24 @@ export default function AgentMatchingForm({ onComplete }: AgentMatchingFormProps
         {formData.currentStep < 5 && renderProgressBar()}
 
         {formData.currentStep === 1 && (
-          <Step1ContactInfo formData={formData} setFormData={setFormData} errors={errors} onNext={handleNext} />
+          <Step1ContactInfo
+            formData={formData}
+            setFormData={setFormData}
+            errors={errors}
+            onNext={handleNext}
+            otp={otp}
+            setOtp={setOtp}
+            otpSent={otpSent}
+            setOtpSent={setOtpSent}
+            otpVerified={otpVerified}
+            setOtpVerified={setOtpVerified}
+            otpLoading={otpLoading}
+            setOtpLoading={setOtpLoading}
+            otpError={otpError}
+            setOtpError={setOtpError}
+            resetOtpState={resetOtpState}
+            phoneToE164={phoneToE164}
+          />
         )}
 
         {formData.currentStep === 2 && (
@@ -311,12 +353,116 @@ interface StepProps {
   onBack?: () => void;
 }
 
-function Step1ContactInfo({ formData, setFormData, errors, onNext }: StepProps) {
+interface Step1ContactInfoProps extends StepProps {
+  otp: string;
+  setOtp: (otp: string) => void;
+  otpSent: boolean;
+  setOtpSent: (sent: boolean) => void;
+  otpVerified: boolean;
+  setOtpVerified: (verified: boolean) => void;
+  otpLoading: 'send' | 'verify' | null;
+  setOtpLoading: (loading: 'send' | 'verify' | null) => void;
+  otpError: string | null;
+  setOtpError: (error: string | null) => void;
+  resetOtpState: () => void;
+  phoneToE164: (phone: string) => string | null;
+}
+
+function Step1ContactInfo({
+  formData,
+  setFormData,
+  errors,
+  onNext,
+  otp,
+  setOtp,
+  otpSent,
+  setOtpSent,
+  otpVerified,
+  setOtpVerified,
+  otpLoading,
+  setOtpLoading,
+  otpError,
+  setOtpError,
+  resetOtpState,
+  phoneToE164,
+}: Step1ContactInfoProps) {
   const formatPhone = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 10);
     if (digits.length <= 3) return digits;
     if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
     return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  };
+
+  const handleSendOtp = async () => {
+    const e164 = phoneToE164(formData.aboutYou.phone);
+    if (!e164) {
+      setOtpError('Please enter a valid 10-digit phone number');
+      return;
+    }
+
+    setOtpLoading('send');
+    setOtpError(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('send-otp', {
+        body: { phone: e164 },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      setOtpSent(true);
+    } catch (err: any) {
+      setOtpError(err.message || 'Failed to send verification code. Please try again.');
+    } finally {
+      setOtpLoading(null);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    const e164 = phoneToE164(formData.aboutYou.phone);
+    if (!e164) {
+      setOtpError('Please enter a valid 10-digit phone number');
+      return;
+    }
+
+    if (!otp || otp.length !== 6) {
+      setOtpError('Please enter a 6-digit verification code');
+      return;
+    }
+
+    setOtpLoading('verify');
+    setOtpError(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-otp', {
+        body: { phone: e164, code: otp },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      if (data?.verified) {
+        setOtpVerified(true);
+        setOtpError(null);
+      } else {
+        throw new Error('Invalid verification code');
+      }
+    } catch (err: any) {
+      setOtpError(err.message || 'Invalid verification code. Please try again.');
+    } finally {
+      setOtpLoading(null);
+    }
   };
 
   return (
@@ -409,12 +555,13 @@ function Step1ContactInfo({ formData, setFormData, errors, onNext }: StepProps) 
             <input
               type="tel"
               value={formData.aboutYou.phone}
-              onChange={(e) =>
+              onChange={(e) => {
+                resetOtpState();
                 setFormData((prev) => ({
                   ...prev,
                   aboutYou: { ...prev.aboutYou, phone: formatPhone(e.target.value) },
-                }))
-              }
+                }));
+              }}
               className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
                 errors.phone ? 'border-red-500' : 'border-gray-300'
               }`}
@@ -426,6 +573,100 @@ function Step1ContactInfo({ formData, setFormData, errors, onNext }: StepProps) 
               <AlertCircle className="w-4 h-4" />
               {errors.phone}
             </p>
+          )}
+
+          {/* OTP Verification UI */}
+          {formData.aboutYou.phone.replace(/\D/g, '').length === 10 && (
+            <div className="mt-4 space-y-3">
+              {!otpVerified ? (
+                <>
+                  {!otpSent ? (
+                    <button
+                      type="button"
+                      onClick={handleSendOtp}
+                      disabled={otpLoading === 'send'}
+                      className="w-full px-4 py-2 bg-primary-400 text-white rounded-lg hover:bg-primary-500 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {otpLoading === 'send' ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        'Send verification code'
+                      )}
+                    </button>
+                  ) : (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Enter verification code
+                        </label>
+                        <input
+                          type="text"
+                          value={otp}
+                          onChange={(e) => {
+                            const digits = e.target.value.replace(/\D/g, '').slice(0, 6);
+                            setOtp(digits);
+                            setOtpError(null);
+                          }}
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
+                            otpError ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                          placeholder="000000"
+                          maxLength={6}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleVerifyOtp}
+                          disabled={otpLoading === 'verify' || otp.length !== 6}
+                          className="flex-1 px-4 py-2 bg-primary-400 text-white rounded-lg hover:bg-primary-500 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          {otpLoading === 'verify' ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              Verifying...
+                            </>
+                          ) : (
+                            'Verify code'
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSendOtp}
+                          disabled={otpLoading === 'send'}
+                          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {otpLoading === 'send' ? 'Sending...' : 'Resend'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {otpError && (
+                    <p className="text-red-500 text-sm flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {otpError}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-green-800">
+                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    <span className="font-medium">Phone number verified</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={resetOtpState}
+                    className="text-sm text-primary-400 hover:text-primary-500 font-medium"
+                  >
+                    Change
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
