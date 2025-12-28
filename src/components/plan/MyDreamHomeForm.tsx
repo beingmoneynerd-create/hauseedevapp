@@ -24,7 +24,6 @@ const INITIAL_FORM_STATE: DreamHome = {
   parkingPriority: null,
   outdoorSpacePriority: null,
   basementPriority: null,
-  workSchoolLocation: null,
   maxCommute: null,
   schoolProximityImportance: null,
   walkabilityImportance: null,
@@ -364,11 +363,10 @@ export default function MyDreamHomeForm() {
             </div>
           )}
 
-          {(formData.workSchoolLocation || formData.maxCommute || formData.schoolProximityImportance || formData.walkabilityImportance || formData.neighborhoodVibe) && (
+          {(formData.maxCommute || formData.schoolProximityImportance || formData.walkabilityImportance || formData.neighborhoodVibe) && (
             <div className="border-l-4 border-primary-400 pl-4 py-2">
               <h3 className="font-semibold text-gray-900 mb-2">Lifestyle Priorities</h3>
               <div className="text-gray-700 space-y-1 text-sm">
-                {formData.workSchoolLocation && <p>Commute from: {formData.workSchoolLocation}</p>}
                 {formData.maxCommute && formData.maxCommute !== 'not-a-factor' && <p>Max commute: {formData.maxCommute} minutes</p>}
                 {formData.schoolProximityImportance && <p>School proximity: {formData.schoolProximityImportance}</p>}
                 {formData.walkabilityImportance && <p>Walkability: {formData.walkabilityImportance}</p>}
@@ -595,20 +593,6 @@ export default function MyDreamHomeForm() {
           helperText="Optional but helps with recommendations"
           defaultExpanded={true}
         >
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Work/School Location
-            </label>
-            <p className="text-xs text-gray-500 mb-2">For commute calculations</p>
-            <input
-              type="text"
-              value={formData.workSchoolLocation || ''}
-              onChange={(e) => updateField('workSchoolLocation', e.target.value || null)}
-              placeholder="Enter address..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
-            />
-          </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Max Commute

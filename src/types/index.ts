@@ -69,7 +69,6 @@ export interface DreamHome {
   parkingPriority: PriorityLevel | null;
   outdoorSpacePriority: PriorityLevel | null;
   basementPriority: PriorityLevel | null;
-  workSchoolLocation: string | null;
   maxCommute: MaxCommute | null;
   schoolProximityImportance: ImportanceLevel | null;
   walkabilityImportance: ImportanceLevel | null;

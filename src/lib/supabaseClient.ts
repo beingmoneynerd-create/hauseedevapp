@@ -31,7 +31,6 @@ export interface DreamHomeDbRecord {
   parking_priority: string | null;
   outdoor_space_priority: string | null;
   basement_priority: string | null;
-  work_school_location: string | null;
   max_commute: string | null;
   school_proximity_importance: string | null;
   walkability_importance: string | null;
@@ -64,7 +63,6 @@ export async function saveDreamHome(
       parking_priority: data.parkingPriority,
       outdoor_space_priority: data.outdoorSpacePriority,
       basement_priority: data.basementPriority,
-      work_school_location: data.workSchoolLocation,
       max_commute: data.maxCommute,
       school_proximity_importance: data.schoolProximityImportance,
       walkability_importance: data.walkabilityImportance,
@@ -133,7 +131,6 @@ export async function loadDreamHome(
       parkingPriority: dbRecord.parking_priority as DreamHome['parkingPriority'],
       outdoorSpacePriority: dbRecord.outdoor_space_priority as DreamHome['outdoorSpacePriority'],
       basementPriority: dbRecord.basement_priority as DreamHome['basementPriority'],
-      workSchoolLocation: dbRecord.work_school_location,
       maxCommute: dbRecord.max_commute as DreamHome['maxCommute'],
       schoolProximityImportance: dbRecord.school_proximity_importance as DreamHome['schoolProximityImportance'],
       walkabilityImportance: dbRecord.walkability_importance as DreamHome['walkabilityImportance'],
