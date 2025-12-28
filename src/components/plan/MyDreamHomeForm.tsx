@@ -180,7 +180,7 @@ export default function MyDreamHomeForm() {
       newErrors.preferredCities = 'You can select up to 3 cities';
     }
 
-    if (formData.propertyTypes.length === 0) {
+    if (!formData.propertyTypes || formData.propertyTypes.length === 0) {
       newErrors.propertyTypes = 'Please select at least one home type';
     }
 
@@ -243,9 +243,10 @@ export default function MyDreamHomeForm() {
   };
 
   const toggleHomeType = (type: PropertyType) => {
-    const types = formData.propertyTypes.includes(type)
-      ? formData.propertyTypes.filter(t => t !== type)
-      : [...formData.propertyTypes, type];
+    const currentTypes = formData.propertyTypes || [];
+    const types = currentTypes.includes(type)
+      ? currentTypes.filter(t => t !== type)
+      : [...currentTypes, type];
     updateField('propertyTypes', types);
   };
 
@@ -312,7 +313,7 @@ export default function MyDreamHomeForm() {
               <h3 className="font-semibold text-gray-900">Home Type</h3>
             </div>
             <p className="text-gray-700">
-              {formData.propertyTypes.length > 0
+              {formData.propertyTypes && formData.propertyTypes.length > 0
                 ? formData.propertyTypes.map(t => HOME_TYPES.find(ht => ht.type === t)?.label).join(', ')
                 : 'No types selected'}
             </p>
@@ -478,7 +479,7 @@ export default function MyDreamHomeForm() {
                 key={homeType.type}
                 type={homeType.type}
                 label={homeType.label}
-                selected={formData.propertyTypes.includes(homeType.type)}
+                selected={formData.propertyTypes?.includes(homeType.type) || false}
                 onSelect={() => toggleHomeType(homeType.type)}
               />
             ))}

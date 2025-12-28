@@ -49,10 +49,9 @@ export async function saveDreamHome(
   data: DreamHome
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Use user_id as workspace_id (one workspace per user)
     const record = {
       user_id: userId,
-      workspace_id: userId,
+      workspace_id: null,
       construction_status: data.constructionStatus,
       price_min: data.priceRange.min,
       price_max: data.priceRange.max,
@@ -80,7 +79,7 @@ export async function saveDreamHome(
     const { error } = await supabase
       .from('dream_home_preferences')
       .upsert(record, {
-        onConflict: 'user_id,workspace_id',
+        onConflict: 'user_id',
       });
 
     if (error) {
@@ -102,12 +101,10 @@ export async function loadDreamHome(
   userId: string
 ): Promise<{ data: DreamHome | null; error?: string }> {
   try {
-    // Use user_id as workspace_id (one workspace per user)
     const { data, error } = await supabase
       .from('dream_home_preferences')
       .select('*')
       .eq('user_id', userId)
-      .eq('workspace_id', userId)
       .maybeSingle();
 
     if (error) {
