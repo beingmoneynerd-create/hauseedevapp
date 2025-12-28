@@ -10,7 +10,7 @@ interface PriorityPillGroupProps {
 const PRIORITY_OPTIONS: { value: PriorityLevel; label: string }[] = [
   { value: 'must-have', label: 'Must-have' },
   { value: 'nice-to-have', label: 'Nice-to-have' },
-  { value: 'not-needed', label: 'Not needed' },
+  { value: 'not-needed', label: 'Indifferent' },
 ];
 
 export default function PriorityPillGroup({
