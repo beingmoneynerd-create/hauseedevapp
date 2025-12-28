@@ -66,7 +66,7 @@ export default function FinancialReadinessForm() {
     <div className="max-w-5xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-3">
-          Financial Readiness Masterclass
+          Financial Readiness
         </h1>
         <p className="text-gray-600">
           Learn the money moves that make home buying stress-free
@@ -82,7 +82,7 @@ export default function FinancialReadinessForm() {
                   <Play className="w-10 h-10 md:w-12 md:h-12 text-primary-400 ml-1" fill="currentColor" />
                 </div>
               </div>
-              <p className="text-gray-700 font-semibold text-lg">Financial Readiness Masterclass</p>
+              <p className="text-gray-700 font-semibold text-lg">Financial Readiness</p>
               <p className="text-sm text-gray-500 mt-2">16-minute comprehensive video guide</p>
               <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full text-xs text-gray-600 shadow-sm">
                 <span className="w-2 h-2 bg-primary-400 rounded-full"></span>

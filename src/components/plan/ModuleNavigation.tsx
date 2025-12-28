@@ -16,7 +16,7 @@ const MODULES: PlanModule[] = [
   },
   {
     id: 'financial-readiness',
-    title: 'Financial Readiness Masterclass',
+    title: 'Financial Readiness',
     description: 'Learn the money moves that make home buying stress-free',
     isImplemented: true,
   },

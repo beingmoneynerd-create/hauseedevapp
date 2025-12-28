@@ -12,7 +12,7 @@ import { ModuleType } from '../types';
 
 const MODULES = [
   { id: 'my-dream-home' as ModuleType, title: 'My Dream Home' },
-  { id: 'financial-readiness' as ModuleType, title: 'Financial Readiness Masterclass' },
+  { id: 'financial-readiness' as ModuleType, title: 'Financial Readiness' },
   { id: 'self-assessment' as ModuleType, title: 'Self-Assessment' },
   { id: 'budget-planner' as ModuleType, title: 'Budget Planner' },
   { id: 'down-payment-tracker' as ModuleType, title: 'Down Payment Tracker' },
