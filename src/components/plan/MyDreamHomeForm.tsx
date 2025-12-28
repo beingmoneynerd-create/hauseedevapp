@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { DreamHome, DreamHomeFormErrors, ONTARIO_CITIES } from '../../types';
 import { saveDreamHome, loadDreamHome } from '../../lib/supabaseClient';
 import DualRangeSlider from './DualRangeSlider';
+import CustomSelect from './CustomSelect';
 
 const INITIAL_FORM_STATE: DreamHome = {
   constructionStatus: null,
@@ -21,6 +22,31 @@ const INITIAL_FORM_STATE: DreamHome = {
 };
 
 const TEMP_USER_ID = 'temp-user-demo';
+
+const BEDROOM_OPTIONS = [
+  { label: '1', value: '1' },
+  { label: '2', value: '2' },
+  { label: '3', value: '3' },
+  { label: '4', value: '4' },
+  { label: '5+', value: '5+' },
+];
+
+const BATHROOM_OPTIONS = [
+  { label: '1', value: '1' },
+  { label: '1.5', value: '1.5' },
+  { label: '2', value: '2' },
+  { label: '2.5', value: '2.5' },
+  { label: '3', value: '3' },
+  { label: '3.5', value: '3.5' },
+  { label: '4+', value: '4+' },
+];
+
+const TIMELINE_OPTIONS = [
+  { label: '0-6 months', value: '0-6 months' },
+  { label: '6-12 months', value: '6-12 months' },
+  { label: '12-24 months', value: '12-24 months' },
+  { label: '2+ years', value: '2+ years' },
+];
 
 export default function MyDreamHomeForm() {
   const userId = TEMP_USER_ID;
@@ -299,38 +325,24 @@ export default function MyDreamHomeForm() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Bedrooms
             </label>
-            <select
-              value={formData.bedrooms || ''}
-              onChange={(e) => updateField('bedrooms', e.target.value || null)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
-            >
-              <option value="">Select...</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5+">5+</option>
-            </select>
+            <CustomSelect
+              value={formData.bedrooms}
+              onChange={(value) => updateField('bedrooms', value)}
+              options={BEDROOM_OPTIONS}
+              placeholder="Select..."
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Bathrooms
             </label>
-            <select
-              value={formData.bathrooms || ''}
-              onChange={(e) => updateField('bathrooms', e.target.value || null)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
-            >
-              <option value="">Select...</option>
-              <option value="1">1</option>
-              <option value="1.5">1.5</option>
-              <option value="2">2</option>
-              <option value="2.5">2.5</option>
-              <option value="3">3</option>
-              <option value="3.5">3.5</option>
-              <option value="4+">4+</option>
-            </select>
+            <CustomSelect
+              value={formData.bathrooms}
+              onChange={(value) => updateField('bathrooms', value)}
+              options={BATHROOM_OPTIONS}
+              placeholder="Select..."
+            />
           </div>
         </div>
 
@@ -378,17 +390,13 @@ export default function MyDreamHomeForm() {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Timeline to Buy <span className="text-red-500">*</span>
           </label>
-          <select
-            value={formData.timeline || ''}
-            onChange={(e) => updateField('timeline', e.target.value || null)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
-          >
-            <option value="">Select...</option>
-            <option value="0-6 months">0-6 months</option>
-            <option value="6-12 months">6-12 months</option>
-            <option value="12-24 months">12-24 months</option>
-            <option value="2+ years">2+ years</option>
-          </select>
+          <CustomSelect
+            value={formData.timeline}
+            onChange={(value) => updateField('timeline', value)}
+            options={TIMELINE_OPTIONS}
+            placeholder="Select..."
+            error={errors.timeline}
+          />
           {errors.timeline && (
             <p className="text-red-500 text-sm mt-1">{errors.timeline}</p>
           )}
