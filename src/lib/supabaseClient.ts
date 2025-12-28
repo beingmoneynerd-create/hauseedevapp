@@ -23,12 +23,23 @@ export interface DreamHomeDbRecord {
   price_min: number;
   price_max: number;
   preferred_cities: string[];
+  property_types: string[];
   bedrooms: string | null;
   bathrooms: string | null;
   max_condo_fees: number | null;
   backyard: 'small' | 'large' | 'indifferent' | null;
+  parking_priority: string | null;
+  outdoor_space_priority: string | null;
+  basement_priority: string | null;
+  work_school_location: string | null;
+  max_commute: string | null;
+  school_proximity_importance: string | null;
+  walkability_importance: string | null;
+  neighborhood_vibe: string | null;
   timeline: string | null;
   notes: string | null;
+  is_complete: boolean;
+  completed_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -46,12 +57,23 @@ export async function saveDreamHome(
       price_min: data.priceRange.min,
       price_max: data.priceRange.max,
       preferred_cities: data.preferredCities,
+      property_types: data.propertyTypes,
       bedrooms: data.bedrooms,
       bathrooms: data.bathrooms,
       max_condo_fees: data.maxCondoFees,
       backyard: data.backyard,
+      parking_priority: data.parkingPriority,
+      outdoor_space_priority: data.outdoorSpacePriority,
+      basement_priority: data.basementPriority,
+      work_school_location: data.workSchoolLocation,
+      max_commute: data.maxCommute,
+      school_proximity_importance: data.schoolProximityImportance,
+      walkability_importance: data.walkabilityImportance,
+      neighborhood_vibe: data.neighborhoodVibe,
       timeline: data.timeline,
       notes: data.notes || '',
+      is_complete: data.isComplete,
+      completed_at: data.completedAt,
       updated_at: new Date().toISOString(),
     };
 
@@ -106,12 +128,23 @@ export async function loadDreamHome(
         max: dbRecord.price_max,
       },
       preferredCities: dbRecord.preferred_cities || [],
+      propertyTypes: (dbRecord.property_types || []) as DreamHome['propertyTypes'],
       bedrooms: dbRecord.bedrooms,
       bathrooms: dbRecord.bathrooms,
       maxCondoFees: dbRecord.max_condo_fees,
       backyard: dbRecord.backyard,
+      parkingPriority: dbRecord.parking_priority as DreamHome['parkingPriority'],
+      outdoorSpacePriority: dbRecord.outdoor_space_priority as DreamHome['outdoorSpacePriority'],
+      basementPriority: dbRecord.basement_priority as DreamHome['basementPriority'],
+      workSchoolLocation: dbRecord.work_school_location,
+      maxCommute: dbRecord.max_commute as DreamHome['maxCommute'],
+      schoolProximityImportance: dbRecord.school_proximity_importance as DreamHome['schoolProximityImportance'],
+      walkabilityImportance: dbRecord.walkability_importance as DreamHome['walkabilityImportance'],
+      neighborhoodVibe: dbRecord.neighborhood_vibe as DreamHome['neighborhoodVibe'],
       timeline: dbRecord.timeline,
       notes: dbRecord.notes || '',
+      isComplete: dbRecord.is_complete || false,
+      completedAt: dbRecord.completed_at,
       updatedAt: dbRecord.updated_at,
     };
 

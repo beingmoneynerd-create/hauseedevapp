@@ -48,6 +48,12 @@ export interface PlanModule {
   isImplemented: boolean;
 }
 
+export type PropertyType = 'condo' | 'freehold-townhouse' | 'semi-detached' | 'detached';
+export type PriorityLevel = 'must-have' | 'nice-to-have' | 'not-needed';
+export type ImportanceLevel = 'high' | 'medium' | 'low';
+export type NeighborhoodVibe = 'quiet' | 'lively' | 'no-preference';
+export type MaxCommute = '15' | '30' | '45' | '60' | 'not-a-factor';
+
 export interface DreamHome {
   constructionStatus: 'new' | 'ready' | null;
   priceRange: {
@@ -55,12 +61,23 @@ export interface DreamHome {
     max: number;
   };
   preferredCities: string[];
+  propertyTypes: PropertyType[];
   bedrooms: string | null;
   bathrooms: string | null;
   maxCondoFees: number | null;
   backyard: 'small' | 'large' | 'indifferent' | null;
+  parkingPriority: PriorityLevel | null;
+  outdoorSpacePriority: PriorityLevel | null;
+  basementPriority: PriorityLevel | null;
+  workSchoolLocation: string | null;
+  maxCommute: MaxCommute | null;
+  schoolProximityImportance: ImportanceLevel | null;
+  walkabilityImportance: ImportanceLevel | null;
+  neighborhoodVibe: NeighborhoodVibe | null;
   timeline: string | null;
   notes: string;
+  isComplete: boolean;
+  completedAt: string | null;
   updatedAt: string;
 }
 
@@ -68,6 +85,7 @@ export interface DreamHomeFormErrors {
   constructionStatus?: string;
   priceRange?: string;
   preferredCities?: string;
+  propertyTypes?: string;
   timeline?: string;
 }
 

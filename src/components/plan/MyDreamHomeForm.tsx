@@ -1,9 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X } from 'lucide-react';
-import { DreamHome, DreamHomeFormErrors, ONTARIO_CITIES } from '../../types';
+import { X, MapPin, Home, DollarSign, Bed, Wrench, Calendar, Edit2 } from 'lucide-react';
+import { DreamHome, DreamHomeFormErrors, ONTARIO_CITIES, PropertyType, PriorityLevel, MaxCommute, NeighborhoodVibe } from '../../types';
 import { saveDreamHome, loadDreamHome } from '../../lib/supabaseClient';
 import DualRangeSlider from './DualRangeSlider';
 import CustomSelect from './CustomSelect';
+import PriorityPillGroup from './PriorityPillGroup';
+import HomeTypeCard from './HomeTypeCard';
+import ImportanceScale from './ImportanceScale';
+import CollapsibleSection from './CollapsibleSection';
 
 const INITIAL_FORM_STATE: DreamHome = {
   constructionStatus: null,
@@ -12,12 +16,23 @@ const INITIAL_FORM_STATE: DreamHome = {
     max: 800000,
   },
   preferredCities: [],
+  propertyTypes: [],
   bedrooms: null,
   bathrooms: null,
   maxCondoFees: null,
   backyard: null,
+  parkingPriority: null,
+  outdoorSpacePriority: null,
+  basementPriority: null,
+  workSchoolLocation: null,
+  maxCommute: null,
+  schoolProximityImportance: null,
+  walkabilityImportance: null,
+  neighborhoodVibe: null,
   timeline: null,
   notes: '',
+  isComplete: false,
+  completedAt: null,
   updatedAt: new Date().toISOString(),
 };
 
@@ -48,12 +63,34 @@ const TIMELINE_OPTIONS = [
   { label: '2+ years', value: '2+ years' },
 ];
 
+const COMMUTE_OPTIONS = [
+  { label: '15 min', value: '15' },
+  { label: '30 min', value: '30' },
+  { label: '45 min', value: '45' },
+  { label: '60 min', value: '60' },
+  { label: 'Not a factor', value: 'not-a-factor' },
+];
+
+const HOME_TYPES: { type: PropertyType; label: string }[] = [
+  { type: 'condo', label: 'Condo / Condo Townhouse' },
+  { type: 'freehold-townhouse', label: 'Freehold Townhouse' },
+  { type: 'semi-detached', label: 'Semi-Detached' },
+  { type: 'detached', label: 'Detached' },
+];
+
+const NEIGHBORHOOD_OPTIONS: { value: NeighborhoodVibe; label: string }[] = [
+  { value: 'quiet', label: 'Quiet' },
+  { value: 'lively', label: 'Lively' },
+  { value: 'no-preference', label: 'No preference' },
+];
+
 export default function MyDreamHomeForm() {
   const userId = TEMP_USER_ID;
   const [formData, setFormData] = useState<DreamHome>(INITIAL_FORM_STATE);
   const [errors, setErrors] = useState<DreamHomeFormErrors>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [citySearch, setCitySearch] = useState('');
   const [showCityDropdown, setShowCityDropdown] = useState(false);
@@ -73,13 +110,18 @@ export default function MyDreamHomeForm() {
       if (dbData) {
         setFormData(dbData);
         setLastSaved(dbData.updatedAt);
+        setIsEditMode(!dbData.isComplete);
       } else if (localData) {
         const parsed = JSON.parse(localData);
         setFormData(parsed);
         setLastSaved(parsed.updatedAt);
+        setIsEditMode(!parsed.isComplete);
+      } else {
+        setIsEditMode(true);
       }
     } catch (err) {
       console.error('Error loading data:', err);
+      setIsEditMode(true);
     } finally {
       setIsLoading(false);
     }
@@ -111,7 +153,7 @@ export default function MyDreamHomeForm() {
 
       setSaveTimeout(timeout);
     },
-    [saveTimeout]
+    [saveTimeout, userId]
   );
 
   const updateField = <K extends keyof DreamHome>(
@@ -130,20 +172,46 @@ export default function MyDreamHomeForm() {
   const validateForm = (): boolean => {
     const newErrors: DreamHomeFormErrors = {};
 
-    if (!formData.constructionStatus) {
-      newErrors.constructionStatus = 'Construction status is required';
-    }
-
-    if (!formData.timeline) {
-      newErrors.timeline = 'Timeline to buy is required';
+    if (formData.preferredCities.length === 0) {
+      newErrors.preferredCities = 'Please select at least one city';
     }
 
     if (formData.preferredCities.length > 3) {
       newErrors.preferredCities = 'You can select up to 3 cities';
     }
 
+    if (formData.propertyTypes.length === 0) {
+      newErrors.propertyTypes = 'Please select at least one home type';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSaveCompletion = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    const completedData = {
+      ...formData,
+      isComplete: true,
+      completedAt: formData.completedAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setFormData(completedData);
+    localStorage.setItem(
+      `hausee_dream_home_${userId}`,
+      JSON.stringify(completedData)
+    );
+
+    const result = await saveDreamHome(userId, completedData);
+
+    if (result.success) {
+      setLastSaved(completedData.updatedAt);
+      setIsEditMode(false);
+    }
   };
 
   const handlePriceRangeChange = (min: number, max: number) => {
@@ -174,6 +242,13 @@ export default function MyDreamHomeForm() {
     }
   };
 
+  const toggleHomeType = (type: PropertyType) => {
+    const types = formData.propertyTypes.includes(type)
+      ? formData.propertyTypes.filter(t => t !== type)
+      : [...formData.propertyTypes, type];
+    updateField('propertyTypes', types);
+  };
+
   const filteredCities = ONTARIO_CITIES.filter(
     city =>
       city.toLowerCase().includes(citySearch.toLowerCase()) &&
@@ -199,16 +274,137 @@ export default function MyDreamHomeForm() {
     );
   }
 
+  if (!isEditMode && formData.isComplete) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 md:p-8 max-w-3xl mx-auto">
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">My Dream Home</h2>
+            <p className="text-sm text-gray-500">
+              Your strategic north star for home buying decisions
+            </p>
+          </div>
+          <button
+            onClick={() => setIsEditMode(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-400 to-primary-500 text-white rounded-lg font-medium hover:shadow-lg transition-all"
+          >
+            <Edit2 className="w-4 h-4" />
+            Edit
+          </button>
+        </div>
+
+        <div className="space-y-6">
+          <div className="border-l-4 border-primary-400 pl-4 py-2">
+            <div className="flex items-center gap-2 mb-2">
+              <MapPin className="w-5 h-5 text-primary-500" />
+              <h3 className="font-semibold text-gray-900">Location</h3>
+            </div>
+            <p className="text-gray-700">
+              {formData.preferredCities.length > 0
+                ? formData.preferredCities.join(', ')
+                : 'No cities selected'}
+            </p>
+          </div>
+
+          <div className="border-l-4 border-primary-400 pl-4 py-2">
+            <div className="flex items-center gap-2 mb-2">
+              <Home className="w-5 h-5 text-primary-500" />
+              <h3 className="font-semibold text-gray-900">Home Type</h3>
+            </div>
+            <p className="text-gray-700">
+              {formData.propertyTypes.length > 0
+                ? formData.propertyTypes.map(t => HOME_TYPES.find(ht => ht.type === t)?.label).join(', ')
+                : 'No types selected'}
+            </p>
+            {formData.constructionStatus && (
+              <p className="text-sm text-gray-600 mt-1">
+                {formData.constructionStatus === 'new' ? 'New Construction' : 'Ready to move in'}
+              </p>
+            )}
+          </div>
+
+          <div className="border-l-4 border-primary-400 pl-4 py-2">
+            <div className="flex items-center gap-2 mb-2">
+              <DollarSign className="w-5 h-5 text-primary-500" />
+              <h3 className="font-semibold text-gray-900">Budget Comfort Zone</h3>
+            </div>
+            <p className="text-gray-700">
+              ${formData.priceRange.min.toLocaleString()} - ${formData.priceRange.max.toLocaleString()}
+            </p>
+          </div>
+
+          {(formData.parkingPriority === 'must-have' || formData.outdoorSpacePriority === 'must-have' || formData.basementPriority === 'must-have' || formData.bedrooms || formData.bathrooms) && (
+            <div className="border-l-4 border-primary-400 pl-4 py-2">
+              <div className="flex items-center gap-2 mb-2">
+                <Bed className="w-5 h-5 text-primary-500" />
+                <h3 className="font-semibold text-gray-900">Must-Haves</h3>
+              </div>
+              <ul className="list-disc list-inside text-gray-700 space-y-1">
+                {formData.bedrooms && <li>{formData.bedrooms} bedroom{formData.bedrooms !== '1' ? 's' : ''}</li>}
+                {formData.bathrooms && <li>{formData.bathrooms} bathroom{formData.bathrooms !== '1' ? 's' : ''}</li>}
+                {formData.parkingPriority === 'must-have' && <li>Parking</li>}
+                {formData.outdoorSpacePriority === 'must-have' && <li>Outdoor Space</li>}
+                {formData.basementPriority === 'must-have' && <li>Basement</li>}
+              </ul>
+            </div>
+          )}
+
+          {(formData.parkingPriority === 'nice-to-have' || formData.outdoorSpacePriority === 'nice-to-have' || formData.basementPriority === 'nice-to-have') && (
+            <div className="border-l-4 border-gray-300 pl-4 py-2">
+              <div className="flex items-center gap-2 mb-2">
+                <Wrench className="w-5 h-5 text-gray-500" />
+                <h3 className="font-semibold text-gray-900">Nice-to-Haves</h3>
+              </div>
+              <ul className="list-disc list-inside text-gray-700 space-y-1">
+                {formData.parkingPriority === 'nice-to-have' && <li>Parking</li>}
+                {formData.outdoorSpacePriority === 'nice-to-have' && <li>Outdoor Space</li>}
+                {formData.basementPriority === 'nice-to-have' && <li>Basement</li>}
+              </ul>
+            </div>
+          )}
+
+          {(formData.workSchoolLocation || formData.maxCommute || formData.schoolProximityImportance || formData.walkabilityImportance || formData.neighborhoodVibe) && (
+            <div className="border-l-4 border-primary-400 pl-4 py-2">
+              <h3 className="font-semibold text-gray-900 mb-2">Lifestyle Priorities</h3>
+              <div className="text-gray-700 space-y-1 text-sm">
+                {formData.workSchoolLocation && <p>Commute from: {formData.workSchoolLocation}</p>}
+                {formData.maxCommute && formData.maxCommute !== 'not-a-factor' && <p>Max commute: {formData.maxCommute} minutes</p>}
+                {formData.schoolProximityImportance && <p>School proximity: {formData.schoolProximityImportance}</p>}
+                {formData.walkabilityImportance && <p>Walkability: {formData.walkabilityImportance}</p>}
+                {formData.neighborhoodVibe && formData.neighborhoodVibe !== 'no-preference' && <p>Neighborhood vibe: {formData.neighborhoodVibe}</p>}
+              </div>
+            </div>
+          )}
+
+          {formData.timeline && (
+            <div className="border-l-4 border-gray-300 pl-4 py-2">
+              <div className="flex items-center gap-2 mb-2">
+                <Calendar className="w-5 h-5 text-gray-500" />
+                <h3 className="font-semibold text-gray-900">Timeline</h3>
+              </div>
+              <p className="text-gray-700">{formData.timeline}</p>
+            </div>
+          )}
+
+          {formData.notes && (
+            <div className="border-l-4 border-gray-300 pl-4 py-2">
+              <h3 className="font-semibold text-gray-900 mb-2">Additional Notes</h3>
+              <p className="text-gray-700 whitespace-pre-wrap">{formData.notes}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 md:p-8 max-w-3xl mx-auto">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">My Dream Home</h2>
-        {!formData.constructionStatus && !formData.timeline && (
-          <p className="text-gray-600">Define your ideal home to guide your search</p>
-        )}
+        <p className="text-gray-600">Define your ideal home to guide your search</p>
         {lastSaved && (
           <p className="text-xs text-gray-400 mt-2">
-            Autosaved locally • Prototype • {formatLastSaved()}
+            {isSaving ? 'Saving...' : `Saved ${formatLastSaved()}`}
           </p>
         )}
       </div>
@@ -216,60 +412,11 @@ export default function MyDreamHomeForm() {
       <div className="space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Construction Status <span className="text-red-500">*</span>
+            WHERE <span className="text-red-500">*</span>
           </label>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => updateField('constructionStatus', 'new')}
-              className={`flex-1 py-3 px-4 rounded-lg border-2 font-medium transition-all ${
-                formData.constructionStatus === 'new'
-                  ? 'border-primary-400 bg-primary-50 text-primary-700'
-                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-              }`}
-            >
-              New Construction
-            </button>
-            <button
-              type="button"
-              onClick={() => updateField('constructionStatus', 'ready')}
-              className={`flex-1 py-3 px-4 rounded-lg border-2 font-medium transition-all ${
-                formData.constructionStatus === 'ready'
-                  ? 'border-primary-400 bg-primary-50 text-primary-700'
-                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-              }`}
-            >
-              Ready to move in
-            </button>
-          </div>
-          {errors.constructionStatus && (
-            <p className="text-red-500 text-sm mt-1">{errors.constructionStatus}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Price Range <span className="text-red-500">*</span>
-          </label>
-          <div className="mb-6">
-            <p className="text-lg font-semibold text-gray-900 text-center">
-              ${formData.priceRange.min.toLocaleString()} to ${formData.priceRange.max.toLocaleString()}
-            </p>
-          </div>
-          <DualRangeSlider
-            min={200000}
-            max={2000000}
-            step={10000}
-            minValue={formData.priceRange.min}
-            maxValue={formData.priceRange.max}
-            onChange={handlePriceRangeChange}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Preferred Cities (max 3)
-          </label>
+          <p className="text-xs text-gray-500 mb-2">
+            {formData.preferredCities.length} of 3 selected
+          </p>
           <div className="relative">
             <input
               type="text"
@@ -301,7 +448,7 @@ export default function MyDreamHomeForm() {
               {formData.preferredCities.map((city) => (
                 <span
                   key={city}
-                  className="inline-flex items-center gap-1 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm"
+                  className="inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-primary-50 to-pink-50 text-primary-700 rounded-full text-sm"
                 >
                   {city}
                   <button
@@ -320,93 +467,215 @@ export default function MyDreamHomeForm() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Bedrooms
-            </label>
-            <CustomSelect
-              value={formData.bedrooms}
-              onChange={(value) => updateField('bedrooms', value)}
-              options={BEDROOM_OPTIONS}
-              placeholder="Select..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Bathrooms
-            </label>
-            <CustomSelect
-              value={formData.bathrooms}
-              onChange={(value) => updateField('bathrooms', value)}
-              options={BATHROOM_OPTIONS}
-              placeholder="Select..."
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Max Condo/POTL Fees
-          </label>
-          <p className="text-xs text-gray-500 mb-2">Monthly fees you're comfortable with</p>
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-            <input
-              type="number"
-              value={formData.maxCondoFees || ''}
-              onChange={(e) => updateField('maxCondoFees', e.target.value ? parseInt(e.target.value) : null)}
-              placeholder="0"
-              className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
-            />
-          </div>
-        </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Backyard
+            HOME TYPE <span className="text-red-500">*</span>
           </label>
-          <div className="flex gap-3">
-            {(['small', 'large', 'indifferent'] as const).map((option) => (
-              <label
-                key={option}
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                <input
-                  type="radio"
-                  name="backyard"
-                  value={option}
-                  checked={formData.backyard === option}
-                  onChange={(e) => updateField('backyard', e.target.value as DreamHome['backyard'])}
-                  className="w-4 h-4 text-primary-400 border-gray-300 focus:ring-primary-400"
-                />
-                <span className="text-gray-700 capitalize">{option}</span>
-              </label>
+          <p className="text-xs text-gray-500 mb-3">Select all types you're open to</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {HOME_TYPES.map((homeType) => (
+              <HomeTypeCard
+                key={homeType.type}
+                type={homeType.type}
+                label={homeType.label}
+                selected={formData.propertyTypes.includes(homeType.type)}
+                onSelect={() => toggleHomeType(homeType.type)}
+              />
             ))}
           </div>
+          {errors.propertyTypes && (
+            <p className="text-red-500 text-sm mt-2">{errors.propertyTypes}</p>
+          )}
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Timeline to Buy <span className="text-red-500">*</span>
+            Construction Status
+          </label>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => updateField('constructionStatus', 'new')}
+              className={`flex-1 py-3 px-4 rounded-lg border-2 font-medium transition-all ${
+                formData.constructionStatus === 'new'
+                  ? 'border-primary-400 bg-primary-50 text-primary-700'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+              }`}
+            >
+              New Construction
+            </button>
+            <button
+              type="button"
+              onClick={() => updateField('constructionStatus', 'ready')}
+              className={`flex-1 py-3 px-4 rounded-lg border-2 font-medium transition-all ${
+                formData.constructionStatus === 'ready'
+                  ? 'border-primary-400 bg-primary-50 text-primary-700'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+              }`}
+            >
+              Ready to move in
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            BUDGET COMFORT ZONE <span className="text-red-500">*</span>
+          </label>
+          <p className="text-xs text-gray-500 mb-3">
+            Your realistic comfort range, not just max approval
+          </p>
+          <div className="mb-6">
+            <p className="text-lg font-semibold text-gray-900 text-center">
+              ${formData.priceRange.min.toLocaleString()} to ${formData.priceRange.max.toLocaleString()}
+            </p>
+          </div>
+          <DualRangeSlider
+            min={200000}
+            max={2000000}
+            step={10000}
+            minValue={formData.priceRange.min}
+            maxValue={formData.priceRange.max}
+            onChange={handlePriceRangeChange}
+          />
+        </div>
+
+        <div>
+          <h3 className="text-base font-semibold text-gray-900 mb-4">MUST-HAVES & PREFERENCES</h3>
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Bedrooms
+                </label>
+                <CustomSelect
+                  value={formData.bedrooms}
+                  onChange={(value) => updateField('bedrooms', value)}
+                  options={BEDROOM_OPTIONS}
+                  placeholder="Select..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Bathrooms
+                </label>
+                <CustomSelect
+                  value={formData.bathrooms}
+                  onChange={(value) => updateField('bathrooms', value)}
+                  options={BATHROOM_OPTIONS}
+                  placeholder="Select..."
+                />
+              </div>
+            </div>
+
+            <PriorityPillGroup
+              value={formData.parkingPriority}
+              onChange={(value) => updateField('parkingPriority', value)}
+              label="Parking"
+            />
+
+            <PriorityPillGroup
+              value={formData.outdoorSpacePriority}
+              onChange={(value) => updateField('outdoorSpacePriority', value)}
+              label="Outdoor Space"
+            />
+
+            <PriorityPillGroup
+              value={formData.basementPriority}
+              onChange={(value) => updateField('basementPriority', value)}
+              label="Basement"
+            />
+          </div>
+        </div>
+
+        <CollapsibleSection
+          title="LIFESTYLE PRIORITIES"
+          helperText="Optional but helps with recommendations"
+          defaultExpanded={true}
+        >
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Work/School Location
+            </label>
+            <p className="text-xs text-gray-500 mb-2">For commute calculations</p>
+            <input
+              type="text"
+              value={formData.workSchoolLocation || ''}
+              onChange={(e) => updateField('workSchoolLocation', e.target.value || null)}
+              placeholder="Enter address..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Max Commute
+            </label>
+            <CustomSelect
+              value={formData.maxCommute}
+              onChange={(value) => updateField('maxCommute', value as MaxCommute)}
+              options={COMMUTE_OPTIONS}
+              placeholder="Select..."
+            />
+          </div>
+
+          <ImportanceScale
+            value={formData.schoolProximityImportance}
+            onChange={(value) => updateField('schoolProximityImportance', value)}
+            label="School Proximity"
+            helperText="How important is being near schools?"
+          />
+
+          <ImportanceScale
+            value={formData.walkabilityImportance}
+            onChange={(value) => updateField('walkabilityImportance', value)}
+            label="Walkability"
+            helperText="Access to amenities on foot"
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Neighborhood Vibe
+            </label>
+            <div className="flex gap-2">
+              {NEIGHBORHOOD_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => updateField('neighborhoodVibe', formData.neighborhoodVibe === option.value ? null : option.value)}
+                  className={`flex-1 py-2.5 px-4 rounded-full text-sm font-medium transition-all ${
+                    formData.neighborhoodVibe === option.value
+                      ? 'bg-gradient-to-r from-primary-400 to-primary-500 text-white shadow-md'
+                      : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </CollapsibleSection>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Timeline to Buy
           </label>
           <CustomSelect
             value={formData.timeline}
             onChange={(value) => updateField('timeline', value)}
             options={TIMELINE_OPTIONS}
             placeholder="Select..."
-            error={errors.timeline}
           />
-          {errors.timeline && (
-            <p className="text-red-500 text-sm mt-1">{errors.timeline}</p>
-          )}
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Specific Preferences
+            ADDITIONAL NOTES
           </label>
+          <p className="text-xs text-gray-500 mb-2">
+            Any special preferences or requirements
+          </p>
           <textarea
             value={formData.notes}
             onChange={(e) => {
@@ -415,11 +684,24 @@ export default function MyDreamHomeForm() {
               }
             }}
             rows={4}
-            placeholder="Add any special preferences and requirements..."
+            placeholder="e.g., Must have a home office, near transit, pet-friendly building..."
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent resize-none"
           />
           <p className="text-xs text-gray-500 mt-1 text-right">
             {formData.notes.length}/500 characters
+          </p>
+        </div>
+
+        <div className="pt-4 border-t border-gray-200">
+          <button
+            type="button"
+            onClick={handleSaveCompletion}
+            className="w-full py-3 bg-gradient-to-r from-primary-400 to-primary-500 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
+          >
+            Save My Dream Home
+          </button>
+          <p className="text-xs text-gray-500 text-center mt-2">
+            You can always edit these preferences later
           </p>
         </div>
       </div>
