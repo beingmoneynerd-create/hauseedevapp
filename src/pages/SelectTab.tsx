@@ -88,13 +88,15 @@ export default function SelectTab() {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowForm(true)}
-          disabled={hasSubmitted}
-          className="w-full md:w-auto mx-auto px-8 py-4 bg-primary-400 text-white rounded-lg hover:bg-primary-500 transition-colors font-medium text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {hasSubmitted ? 'Request Already Submitted' : 'Get Matched'}
-        </button>
+        <div className="flex justify-center">
+          <button
+            onClick={() => setShowForm(true)}
+            disabled={hasSubmitted}
+            className="w-full md:w-auto px-8 py-4 bg-primary-400 text-white rounded-lg hover:bg-primary-500 transition-colors font-medium text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {hasSubmitted ? 'Request Already Submitted' : 'Get Matched'}
+          </button>
+        </div>
 
         <p className="text-sm text-gray-500 text-center mt-3">
           Takes about 5 minutes • Free for buyers
