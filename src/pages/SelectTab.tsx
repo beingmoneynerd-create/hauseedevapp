@@ -91,9 +91,9 @@ export default function SelectTab() {
         <button
           onClick={() => setShowForm(true)}
           disabled={hasSubmitted}
-          className="w-full md:w-auto px-8 py-4 bg-primary-400 text-white rounded-lg hover:bg-primary-500 transition-colors font-medium text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full md:w-auto mx-auto px-8 py-4 bg-primary-400 text-white rounded-lg hover:bg-primary-500 transition-colors font-medium text-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {hasSubmitted ? 'Request Already Submitted' : 'Start Agent Matching'}
+          {hasSubmitted ? 'Request Already Submitted' : 'Get Matched'}
         </button>
 
         <p className="text-sm text-gray-500 text-center mt-3">
