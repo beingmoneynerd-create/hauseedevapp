@@ -223,12 +223,22 @@ export default function MyDreamHomeForm() {
       return;
     }
 
-    if (!formData.preferredCities.includes(city)) {
-      updateField('preferredCities', [...formData.preferredCities, city]);
+    const trimmedCity = city.trim();
+    if (!trimmedCity) return;
+
+    if (!formData.preferredCities.includes(trimmedCity)) {
+      updateField('preferredCities', [...formData.preferredCities, trimmedCity]);
     }
 
     setCitySearch('');
     setShowCityDropdown(false);
+  };
+
+  const handleCityKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && citySearch.trim()) {
+      e.preventDefault();
+      addCity(citySearch);
+    }
   };
 
   const removeCity = (city: string) => {
@@ -414,21 +424,32 @@ export default function MyDreamHomeForm() {
             WHERE <span className="text-red-500">*</span>
           </label>
           <p className="text-xs text-gray-500 mb-2">
-            {formData.preferredCities.length} of 3 selected
+            {formData.preferredCities.length} of 3 selected • Type and press Enter to add any city
           </p>
           <div className="relative">
             <input
               type="text"
               value={citySearch}
               onChange={(e) => setCitySearch(e.target.value)}
+              onKeyDown={handleCityKeyDown}
               onFocus={() => setShowCityDropdown(true)}
               onBlur={() => setTimeout(() => setShowCityDropdown(false), 200)}
-              placeholder="Search for cities..."
+              placeholder="Search for cities or type your own..."
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
               disabled={formData.preferredCities.length >= 3}
             />
-            {showCityDropdown && filteredCities.length > 0 && (
+            {showCityDropdown && (citySearch.trim() || filteredCities.length > 0) && (
               <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {citySearch.trim() && !ONTARIO_CITIES.some(c => c.toLowerCase() === citySearch.toLowerCase()) && (
+                  <button
+                    key="custom"
+                    type="button"
+                    onClick={() => addCity(citySearch)}
+                    className="w-full px-4 py-2 text-left bg-primary-50 hover:bg-primary-100 text-primary-700 font-medium border-b border-primary-200"
+                  >
+                    Add "{citySearch}" (press Enter)
+                  </button>
+                )}
                 {filteredCities.map((city) => (
                   <button
                     key={city}
