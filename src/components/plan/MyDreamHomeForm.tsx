@@ -404,7 +404,7 @@ export default function MyDreamHomeForm() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Notes
+            Specific Preferences
           </label>
           <textarea
             value={formData.notes}
@@ -414,7 +414,7 @@ export default function MyDreamHomeForm() {
               }
             }}
             rows={4}
-            placeholder="Add any additional preferences or requirements..."
+            placeholder="Add any special preferences and requirements..."
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent resize-none"
           />
           <p className="text-xs text-gray-500 mt-1 text-right">
