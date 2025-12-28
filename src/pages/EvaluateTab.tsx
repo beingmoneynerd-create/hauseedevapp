@@ -233,8 +233,6 @@ function BrowseView({
         description="Start by browsing listings on Realtor.ca or Zolo.ca, then add homes here to rate, compare, and track them."
         actionLabel="+ Add Your First Home"
         onAction={onAddHome}
-        secondaryActionLabel="Learn how to evaluate homes"
-        onSecondaryAction={() => {}}
       />
     );
   }
