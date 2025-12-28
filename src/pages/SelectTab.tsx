@@ -24,7 +24,7 @@ export default function SelectTab() {
       <div className="bg-white rounded-lg shadow-sm p-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Choose the Right Real Estate Agent — On Your Terms</h2>
         <p className="text-gray-600 mb-8">
-          Compare qualified agents, review personalized service offers, and choose who earns your business — with no pressure and no obligation.
+          Compare qualified agents, review personalized service offers, and choose who earns your business — with no pressure, no obligation, and meaningful savings.
         </p>
 
         {hasSubmitted ? (
@@ -66,13 +66,22 @@ export default function SelectTab() {
                 <span className="text-2xl">💬</span>
               </div>
               <div>
-                <h3 className="font-bold text-gray-900 mb-1">No Obligation</h3>
+                <h3 className="font-bold text-gray-900 mb-1">Agent-Provided Savings</h3>
                 <p className="text-gray-600">
-                  Meet up to three agents, compare their approach and service offers, and choose only when it feels right. No pressure. No commitment.
+                  Agents may offer reduced commission, cashback from their commission, or exclusive perks.
+                </p>
+                <p className="text-gray-600">
+                  Guaranteed minimum $5,000 in savings, with potential savings of up to 1% of your home's purchase price.
                 </p>
               </div>
             </div>
           </div>
+        )}
+
+        {!hasSubmitted && (
+          <p className="text-gray-600 mb-8">
+            Savings may be offered upfront, after closing, or through added benefits — depending on the agent you choose.
+          </p>
         )}
 
         <div className="flex flex-col items-center gap-4 mb-8">
@@ -135,7 +144,7 @@ export default function SelectTab() {
               <div className="w-10 h-10 bg-primary-400 text-white rounded-full flex items-center justify-center font-bold mx-auto mb-2">
                 3
               </div>
-              <div className="font-medium text-gray-900">Meet & Compare</div>
+              <div className="font-medium text-gray-900">Meet, Compare & Review Offers</div>
               <div className="text-gray-600 text-xs">Interview agents, review and compare their service offer, and ask the questions that matter to you.</div>
             </div>
             <div className="text-center">
@@ -148,6 +157,9 @@ export default function SelectTab() {
           </div>
           <p className="text-sm text-gray-500 text-center mt-6">
             Hausee is buyer-first. We don't sell your contact info or pressure you to choose an agent.
+          </p>
+          <p className="text-sm text-gray-500 text-center mt-2">
+            Savings and incentives vary by agent and transaction. Details are confirmed directly with matched agents before engagement.
           </p>
         </div>
       </div>
