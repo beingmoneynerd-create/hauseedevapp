@@ -58,7 +58,6 @@ const initialFormData: SelectFormData = {
     preApprovalStatus: '',
     mortgageApprovedAmount: '',
     isPrimaryResidence: null,
-    additionalComments: '',
   },
   sellerQuestions: {
     propertyType: '',
@@ -1097,7 +1096,7 @@ function Step3ABuyerQuestions({ formData, setFormData, errors, onNext, onBack }:
             {[
               { value: 'yes', label: 'Yes, I have pre-approval' },
               { value: 'in_progress', label: 'In progress' },
-              { value: 'no', label: 'No, not yet' },
+              { value: 'no', label: 'Yet to apply' },
             ].map((option) => (
               <label key={option.value} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                 <input
@@ -1201,28 +1200,6 @@ function Step3ABuyerQuestions({ formData, setFormData, errors, onNext, onBack }:
               {errors.isPrimaryResidence}
             </p>
           )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Additional Comments (Optional)
-          </label>
-          <textarea
-            value={formData.buyerQuestions!.additionalComments}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                buyerQuestions: { ...prev.buyerQuestions!, additionalComments: e.target.value },
-              }))
-            }
-            maxLength={500}
-            rows={4}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 resize-none"
-            placeholder="Any specific requirements or preferences..."
-          />
-          <div className="text-xs text-gray-500 text-right mt-1">
-            {formData.buyerQuestions!.additionalComments?.length || 0} / 500
-          </div>
         </div>
       </div>
 
@@ -1791,7 +1768,7 @@ function Step3CCombinedQuestions({ formData, setFormData, errors, onNext, onBack
                 {[
                   { value: 'yes', label: 'Yes, I have pre-approval' },
                   { value: 'in_progress', label: 'In progress' },
-                  { value: 'no', label: 'No, not yet' },
+                  { value: 'no', label: 'Yet to apply' },
                 ].map((option) => (
                   <label key={option.value} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <input

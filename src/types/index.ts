@@ -484,7 +484,6 @@ export interface BuyerQuestionsData {
   preApprovalStatus: 'yes' | 'no' | 'in_progress' | '';
   mortgageApprovedAmount?: string;
   isPrimaryResidence: boolean | null;
-  additionalComments?: string;
 }
 
 export interface SellerQuestionsData {
