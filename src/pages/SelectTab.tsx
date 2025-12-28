@@ -1,9 +1,12 @@
 import { useState } from 'react';
+import { Play } from 'lucide-react';
 import AgentMatchingForm from '../components/select/AgentMatchingForm';
+import VideoModal from '../components/VideoModal';
 
 export default function SelectTab() {
   const [showForm, setShowForm] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
 
   if (showForm) {
     return (
@@ -72,6 +75,19 @@ export default function SelectTab() {
           </div>
         )}
 
+        <div className="flex flex-col items-center gap-4 mb-8">
+          <button
+            onClick={() => setShowVideoModal(true)}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors text-sm"
+          >
+            <Play className="w-4 h-4" />
+            <span>Watch how Hausee Select works (2 min)</span>
+          </button>
+          <p className="text-xs text-gray-500 text-center max-w-md">
+            See how buyers compare agents and stay in control — before sharing any contact info.
+          </p>
+        </div>
+
         <button
           onClick={() => setShowForm(true)}
           disabled={hasSubmitted}
@@ -79,6 +95,22 @@ export default function SelectTab() {
         >
           {hasSubmitted ? 'Request Already Submitted' : 'Start Agent Matching'}
         </button>
+
+        <p className="text-sm text-gray-500 text-center mt-3">
+          Takes about 5 minutes • Free for buyers
+        </p>
+
+        <p className="text-sm text-gray-600 text-center mt-4">
+          Have questions?{' '}
+          <a
+            href="https://wa.me/16479311196"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-400 hover:text-primary-500 transition-colors"
+          >
+            Chat with us
+          </a>
+        </p>
 
         <div className="mt-8 pt-8 border-t border-gray-200">
           <h3 className="font-bold text-gray-900 mb-3">How It Works</h3>
@@ -114,6 +146,13 @@ export default function SelectTab() {
           </div>
         </div>
       </div>
+
+      <VideoModal
+        isOpen={showVideoModal}
+        onClose={() => setShowVideoModal(false)}
+        videoUrl="https://www.youtube.com/embed/dQw4w9WgXcQ"
+        title="How Hausee Select Works"
+      />
     </div>
   );
 }
