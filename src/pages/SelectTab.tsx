@@ -1,12 +1,24 @@
 import { useState } from 'react';
 import { Play } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import AgentMatchingForm from '../components/select/AgentMatchingForm';
 import VideoModal from '../components/VideoModal';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function SelectTab() {
+  const navigate = useNavigate();
+  const { user, isLoaded } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [showVideoModal, setShowVideoModal] = useState(false);
+
+  const handleGetMatched = () => {
+    if (!user) {
+      navigate('/signin', { state: { returnTo: '/select' } });
+      return;
+    }
+    setShowForm(true);
+  };
 
   if (showForm) {
     return (
@@ -99,11 +111,11 @@ export default function SelectTab() {
 
         <div className="flex justify-center">
           <button
-            onClick={() => setShowForm(true)}
-            disabled={hasSubmitted}
+            onClick={handleGetMatched}
+            disabled={hasSubmitted || !isLoaded}
             className="w-full md:w-auto px-8 py-4 bg-primary-400 text-white rounded-lg hover:bg-primary-500 transition-colors font-medium text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {hasSubmitted ? 'Request Already Submitted' : 'Get Matched'}
+            {!isLoaded ? 'Loading...' : hasSubmitted ? 'Request Already Submitted' : user ? 'Get Matched' : 'Sign In to Get Matched'}
           </button>
         </div>
 

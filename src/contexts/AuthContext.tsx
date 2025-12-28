@@ -1,10 +1,13 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
+import { UserProfile } from '../types';
+import { ensureUserProfile, getUserProfile, updateUserProfile } from '../lib/profileService';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  userProfile: UserProfile | null;
   isLoading: boolean;
   isLoaded: boolean;
   signUp: (email: string, metadata?: Record<string, any>) => Promise<{ error: Error | null }>;
@@ -12,6 +15,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   updateUserMetadata: (metadata: Record<string, any>) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
+  refreshUserProfile: () => Promise<void>;
+  updateProfile: (updates: { firstName?: string; lastName?: string; phone?: string; homeStage?: string }) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,11 +24,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     let mounted = true;
+
+    async function loadUserProfile(userId: string, email: string, metadata?: Record<string, any>) {
+      const profile = await ensureUserProfile(userId, email, metadata);
+      if (mounted && profile) {
+        setUserProfile(profile);
+      }
+    }
 
     async function initializeAuth() {
       try {
@@ -32,6 +45,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (mounted) {
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
+
+          if (currentSession?.user) {
+            await loadUserProfile(
+              currentSession.user.id,
+              currentSession.user.email!,
+              currentSession.user.user_metadata
+            );
+          }
+
           setIsLoading(false);
           setIsLoaded(true);
         }
@@ -47,10 +69,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
+      async (_event, newSession) => {
         if (mounted) {
           setSession(newSession);
           setUser(newSession?.user ?? null);
+
+          if (newSession?.user) {
+            await loadUserProfile(
+              newSession.user.id,
+              newSession.user.email!,
+              newSession.user.user_metadata
+            );
+          } else {
+            setUserProfile(null);
+          }
+
           setIsLoading(false);
           setIsLoaded(true);
         }
@@ -144,11 +177,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refreshUserProfile = async () => {
+    if (!user) return;
+
+    const profile = await getUserProfile(user.id);
+    if (profile) {
+      setUserProfile(profile);
+    }
+  };
+
+  const updateProfile = async (updates: {
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    homeStage?: string;
+  }) => {
+    if (!user) {
+      return { error: new Error('No user logged in') };
+    }
+
+    try {
+      const updatedProfile = await updateUserProfile(user.id, updates);
+
+      if (!updatedProfile) {
+        throw new Error('Failed to update profile');
+      }
+
+      setUserProfile(updatedProfile);
+
+      const metadataUpdates: Record<string, any> = {};
+      if (updates.firstName || updates.lastName) {
+        const fullName = `${updates.firstName || userProfile?.firstName || ''} ${updates.lastName || userProfile?.lastName || ''}`.trim();
+        metadataUpdates.fullName = fullName;
+      }
+      if (updates.phone !== undefined) {
+        metadataUpdates.phoneNumber = updates.phone;
+      }
+      if (updates.homeStage) {
+        metadataUpdates.homeStage = updates.homeStage;
+      }
+
+      if (Object.keys(metadataUpdates).length > 0) {
+        await updateUserMetadata(metadataUpdates);
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error('Update profile error:', error);
+      return { error: error as Error };
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
         user,
         session,
+        userProfile,
         isLoading,
         isLoaded,
         signUp,
@@ -156,6 +241,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut,
         updateUserMetadata,
         signInWithGoogle,
+        refreshUserProfile,
+        updateProfile,
       }}
     >
       {children}

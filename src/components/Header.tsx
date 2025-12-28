@@ -1,13 +1,21 @@
 import { useState, useRef, useEffect } from 'react';
-import { User, Settings, LogOut, HelpCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { User, Settings, LogOut, HelpCircle, LogIn } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface HeaderProps {
   onOpenSettings: () => void;
 }
 
 export default function Header({ onOpenSettings }: HeaderProps) {
+  const { user, userProfile, signOut } = useAuth();
+  const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const displayName = userProfile?.firstName
+    ? `${userProfile.firstName}${userProfile.lastName ? ' ' + userProfile.lastName : ''}`
+    : user?.email?.split('@')[0] || 'Guest';
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -25,10 +33,15 @@ export default function Header({ onOpenSettings }: HeaderProps) {
     };
   }, [showDropdown]);
 
-  const handleMenuClick = (action: string) => {
+  const handleMenuClick = async (action: string) => {
     setShowDropdown(false);
     if (action === 'settings') {
       onOpenSettings();
+    } else if (action === 'signout') {
+      await signOut();
+      navigate('/plan');
+    } else if (action === 'signin') {
+      navigate('/signin', { state: { returnTo: window.location.pathname } });
     }
   };
 
@@ -48,7 +61,9 @@ export default function Header({ onOpenSettings }: HeaderProps) {
         </button>
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Hausee Navigator</h1>
-          <p className="text-sm text-gray-500">Welcome back, Guest</p>
+          <p className="text-sm text-gray-500">
+            {user ? `Welcome back, ${displayName}` : 'Welcome, Guest'}
+          </p>
         </div>
       </div>
       <div className="flex items-center gap-4">
@@ -65,28 +80,49 @@ export default function Header({ onOpenSettings }: HeaderProps) {
 
           {showDropdown && (
             <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-              <button
-                onClick={() => handleMenuClick('settings')}
-                className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <Settings className="w-5 h-5 text-gray-500" />
-                <span className="font-medium">Profile & Settings</span>
-              </button>
-              <button
-                onClick={() => handleMenuClick('help')}
-                className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <HelpCircle className="w-5 h-5 text-gray-500" />
-                <span className="font-medium">Help & Support</span>
-              </button>
-              <div className="border-t border-gray-200 my-2"></div>
-              <button
-                onClick={() => handleMenuClick('signout')}
-                className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors"
-              >
-                <LogOut className="w-5 h-5" />
-                <span className="font-medium">Sign Out</span>
-              </button>
+              {user ? (
+                <>
+                  <button
+                    onClick={() => handleMenuClick('settings')}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <Settings className="w-5 h-5 text-gray-500" />
+                    <span className="font-medium">Profile & Settings</span>
+                  </button>
+                  <button
+                    onClick={() => handleMenuClick('help')}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <HelpCircle className="w-5 h-5 text-gray-500" />
+                    <span className="font-medium">Help & Support</span>
+                  </button>
+                  <div className="border-t border-gray-200 my-2"></div>
+                  <button
+                    onClick={() => handleMenuClick('signout')}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    <span className="font-medium">Sign Out</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => handleMenuClick('signin')}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-primary-600 hover:bg-primary-50 transition-colors"
+                  >
+                    <LogIn className="w-5 h-5" />
+                    <span className="font-medium">Sign In</span>
+                  </button>
+                  <button
+                    onClick={() => handleMenuClick('help')}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <HelpCircle className="w-5 h-5 text-gray-500" />
+                    <span className="font-medium">Help & Support</span>
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>

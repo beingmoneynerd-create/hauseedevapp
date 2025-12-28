@@ -33,7 +33,7 @@ interface SettingsModalProps {
 }
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -218,15 +218,24 @@ function AccountSection({
 }
 
 function PersonalInformationSection({ user }: { user: SupabaseUser }) {
-  const [firstName, setFirstName] = useState(user.user_metadata?.fullName?.split(' ')[0] || '');
-  const [lastName, setLastName] = useState(user.user_metadata?.fullName?.split(' ').slice(1).join(' ') || '');
-  const [phone, setPhone] = useState(user.user_metadata?.phoneNumber || '');
-  const [homeStage, setHomeStage] = useState<HomeStage | ''>((user.user_metadata?.homeStage as HomeStage) || '');
+  const { userProfile, updateProfile } = useAuth();
+  const [firstName, setFirstName] = useState(userProfile?.firstName || '');
+  const [lastName, setLastName] = useState(userProfile?.lastName || '');
+  const [phone, setPhone] = useState(userProfile?.phone || '');
+  const [homeStage, setHomeStage] = useState<HomeStage | ''>(userProfile?.homeStage as HomeStage || '');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { updateUserMetadata } = useAuth();
+
+  useEffect(() => {
+    if (userProfile) {
+      setFirstName(userProfile.firstName || '');
+      setLastName(userProfile.lastName || '');
+      setPhone(userProfile.phone || '');
+      setHomeStage(userProfile.homeStage as HomeStage || '');
+    }
+  }, [userProfile]);
 
   const formatPhone = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 10);
@@ -238,14 +247,13 @@ function PersonalInformationSection({ user }: { user: SupabaseUser }) {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const metadata = {
-        fullName: `${firstName} ${lastName}`.trim(),
-        phoneNumber: phone || undefined,
+      const { error } = await updateProfile({
+        firstName,
+        lastName,
+        phone: phone || undefined,
         homeStage: homeStage || undefined,
-      };
+      });
 
-      const { error } = await updateUserMetadata(metadata);
-      
       if (error) {
         throw error;
       }

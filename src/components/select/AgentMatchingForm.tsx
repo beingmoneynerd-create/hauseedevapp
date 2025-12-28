@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { SelectFormData, ONTARIO_CITIES } from '../../types';
 import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../contexts/AuthContext';
 
 const PROPERTY_TYPES = [
   'Condo / Condo Townhouse',
@@ -85,6 +86,7 @@ interface AgentMatchingFormProps {
 }
 
 export default function AgentMatchingForm({ onComplete }: AgentMatchingFormProps) {
+  const { user, userProfile } = useAuth();
   const [formData, setFormData] = useState<SelectFormData>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [otp, setOtp] = useState<string>('');
@@ -97,12 +99,26 @@ export default function AgentMatchingForm({ onComplete }: AgentMatchingFormProps
     const saved = localStorage.getItem('agentMatchingForm');
     if (saved) {
       try {
-        setFormData(JSON.parse(saved));
+        const savedData = JSON.parse(saved);
+        setFormData(savedData);
       } catch {
         console.error('Failed to load saved form data');
       }
     }
-  }, []);
+
+    if (user && userProfile) {
+      setFormData((prev) => ({
+        ...prev,
+        aboutYou: {
+          ...prev.aboutYou,
+          firstName: userProfile.firstName || prev.aboutYou.firstName,
+          lastName: userProfile.lastName || prev.aboutYou.lastName,
+          email: user.email || prev.aboutYou.email,
+          phone: userProfile.phone || prev.aboutYou.phone,
+        },
+      }));
+    }
+  }, [user, userProfile]);
 
   useEffect(() => {
     if (formData.status !== 'submitted') {
