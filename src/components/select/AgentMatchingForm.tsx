@@ -17,7 +17,28 @@ import {
 import { SelectFormData, ONTARIO_CITIES } from '../../types';
 import { supabase } from '../../lib/supabaseClient';
 
-const PROPERTY_TYPES = ['Condo', 'Townhouse', 'Semi-Detached', 'Detached', 'Multi-Unit'];
+const PROPERTY_TYPES = [
+  'Condo / Condo Townhouse',
+  'Freehold Townhouse',
+  'Semi-Detached House',
+  'Detached House',
+];
+
+const BUDGET_RANGES = [
+  '$900K or less',
+  '$900K – $1.1M',
+  '$1.1M – $1.3M',
+  '$1.3M – $1.6M',
+  '$1.6M or more',
+];
+
+const PRICE_EXPECTATION_RANGES = [
+  '$900K or less',
+  '$900K – $1.1M',
+  '$1.1M – $1.3M',
+  '$1.3M – $1.6M',
+  '$1.6M or more',
+];
 
 const initialFormData: SelectFormData = {
   aboutYou: {
@@ -31,25 +52,30 @@ const initialFormData: SelectFormData = {
   propertyIntent: '',
   buyerQuestions: {
     preferredCities: [],
-    priceRange: { min: 200000, max: 2000000 },
+    budgetRange: '',
     propertyTypes: [],
     timeline: '',
     preApprovalStatus: '',
-    hasCurrentAgent: false,
+    mortgageApprovedAmount: '',
+    isPrimaryResidence: null,
     additionalComments: '',
   },
   sellerQuestions: {
     propertyType: '',
-    propertyLocation: '',
-    estimatedValue: 0,
+    city: '',
+    intersectionOrAddress: '',
+    priceExpectationRange: '',
     sellingTimeline: '',
     sellingReason: '',
     propertyCondition: '',
     propertyNotes: '',
   },
   consent: {
-    contactConsent: false,
-    sharingConsent: false,
+    communicationConsent: false,
+    termsAccepted: false,
+    hasCurrentAgent: false,
+    contactPreference: '',
+    additionalNotes: '',
   },
   currentStep: 1,
   status: 'draft',
@@ -128,9 +154,15 @@ export default function AgentMatchingForm({ onComplete }: AgentMatchingFormProps
       }
     }
 
-    if (step === 3 && formData.propertyIntent === 'buying') {
+    const isBuyer = formData.propertyIntent === 'buy-first' || formData.propertyIntent === 'buy-another' || formData.propertyIntent === 'sell-and-buy';
+    const isSeller = formData.propertyIntent === 'sell-current' || formData.propertyIntent === 'sell-and-buy';
+
+    if (step === 3 && isBuyer) {
       if (formData.buyerQuestions!.preferredCities.length === 0) {
         newErrors.preferredCities = 'Please select at least one city';
+      }
+      if (!formData.buyerQuestions!.budgetRange) {
+        newErrors.budgetRange = 'Please select your budget range';
       }
       if (formData.buyerQuestions!.propertyTypes.length === 0) {
         newErrors.propertyTypes = 'Please select at least one property type';
@@ -141,17 +173,26 @@ export default function AgentMatchingForm({ onComplete }: AgentMatchingFormProps
       if (!formData.buyerQuestions!.preApprovalStatus) {
         newErrors.preApprovalStatus = 'Please select your pre-approval status';
       }
+      if (formData.buyerQuestions!.preApprovalStatus === 'yes' && !formData.buyerQuestions!.mortgageApprovedAmount) {
+        newErrors.mortgageApprovedAmount = 'Please enter your approved amount';
+      }
+      if (formData.buyerQuestions!.isPrimaryResidence === null) {
+        newErrors.isPrimaryResidence = 'Please indicate if this is for primary residence';
+      }
     }
 
-    if (step === 3 && formData.propertyIntent === 'selling') {
+    if (step === 3 && isSeller) {
       if (!formData.sellerQuestions!.propertyType) {
         newErrors.propertyType = 'Please select property type';
       }
-      if (!formData.sellerQuestions!.propertyLocation) {
-        newErrors.propertyLocation = 'Please enter property location';
+      if (!formData.sellerQuestions!.city) {
+        newErrors.city = 'Please select a city';
       }
-      if (!formData.sellerQuestions!.estimatedValue || formData.sellerQuestions!.estimatedValue < 1000) {
-        newErrors.estimatedValue = 'Please enter estimated value';
+      if (!formData.sellerQuestions!.intersectionOrAddress) {
+        newErrors.intersectionOrAddress = 'Please enter intersection or address';
+      }
+      if (!formData.sellerQuestions!.priceExpectationRange) {
+        newErrors.priceExpectationRange = 'Please select price expectation range';
       }
       if (!formData.sellerQuestions!.sellingTimeline) {
         newErrors.sellingTimeline = 'Please select selling timeline';
@@ -165,11 +206,14 @@ export default function AgentMatchingForm({ onComplete }: AgentMatchingFormProps
     }
 
     if (step === 4) {
-      if (!formData.consent.contactConsent) {
-        newErrors.contactConsent = 'You must consent to be contacted';
+      if (!formData.consent.communicationConsent) {
+        newErrors.communicationConsent = 'You must consent to receive communication';
       }
-      if (!formData.consent.sharingConsent) {
-        newErrors.sharingConsent = 'You must consent to information sharing';
+      if (!formData.consent.termsAccepted) {
+        newErrors.termsAccepted = 'You must accept all terms to continue';
+      }
+      if (!formData.consent.contactPreference) {
+        newErrors.contactPreference = 'Please select your preferred contact method';
       }
     }
 
@@ -285,7 +329,7 @@ export default function AgentMatchingForm({ onComplete }: AgentMatchingFormProps
           />
         )}
 
-        {formData.currentStep === 3 && formData.propertyIntent === 'buying' && (
+        {formData.currentStep === 3 && (formData.propertyIntent === 'buy-first' || formData.propertyIntent === 'buy-another') && (
           <Step3ABuyerQuestions
             formData={formData}
             setFormData={setFormData}
@@ -295,8 +339,18 @@ export default function AgentMatchingForm({ onComplete }: AgentMatchingFormProps
           />
         )}
 
-        {formData.currentStep === 3 && formData.propertyIntent === 'selling' && (
+        {formData.currentStep === 3 && formData.propertyIntent === 'sell-current' && (
           <Step3BSellerQuestions
+            formData={formData}
+            setFormData={setFormData}
+            errors={errors}
+            onNext={handleNext}
+            onBack={() => goToStep(2)}
+          />
+        )}
+
+        {formData.currentStep === 3 && formData.propertyIntent === 'sell-and-buy' && (
+          <Step3CCombinedQuestions
             formData={formData}
             setFormData={setFormData}
             errors={errors}
@@ -725,63 +779,72 @@ function Step1ContactInfo({
 }
 
 function Step2PropertyIntent({ formData, setFormData, errors, onNext, onBack }: StepProps) {
+  const intentOptions = [
+    {
+      value: 'buy-first' as const,
+      title: 'Buy my first home',
+      description: 'First-time homebuyer looking to purchase',
+      icon: Home,
+    },
+    {
+      value: 'buy-another' as const,
+      title: 'Buy another home',
+      description: 'Looking to purchase an additional property',
+      icon: Home,
+    },
+    {
+      value: 'sell-current' as const,
+      title: 'Sell my current home',
+      description: 'Ready to list my property for sale',
+      icon: DollarSign,
+    },
+    {
+      value: 'sell-and-buy' as const,
+      title: 'Sell my current home to buy another home',
+      description: 'Looking to sell and purchase at the same time',
+      icon: Home,
+    },
+  ];
+
   return (
     <div className="bg-white rounded-lg shadow-sm p-8">
       <h2 className="text-2xl font-bold text-gray-900 mb-2">What brings you here?</h2>
       <p className="text-gray-600 mb-8">Select the option that best describes your needs.</p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <button
-          onClick={() =>
-            setFormData((prev) => ({
-              ...prev,
-              propertyIntent: 'buying',
-            }))
-          }
-          className={`p-8 rounded-lg border-2 transition-all text-left hover:shadow-lg ${
-            formData.propertyIntent === 'buying'
-              ? 'border-primary-400 bg-primary-50 shadow-md'
-              : 'border-gray-200 hover:border-primary-200'
-          }`}
-        >
-          <div className="w-16 h-16 bg-primary-100 rounded-lg flex items-center justify-center mb-4">
-            <Home className="w-8 h-8 text-primary-400" />
-          </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Buying a home</h3>
-          <p className="text-gray-600">Looking to purchase your dream property</p>
-          {formData.propertyIntent === 'buying' && (
-            <div className="mt-4 flex items-center gap-2 text-primary-400 font-medium">
-              <CheckCircle2 className="w-5 h-5" />
-              Selected
-            </div>
-          )}
-        </button>
+        {intentOptions.map((option) => {
+          const Icon = option.icon;
+          const isSelected = formData.propertyIntent === option.value;
 
-        <button
-          onClick={() =>
-            setFormData((prev) => ({
-              ...prev,
-              propertyIntent: 'selling',
-            }))
-          }
-          className={`p-8 rounded-lg border-2 transition-all text-left hover:shadow-lg ${
-            formData.propertyIntent === 'selling'
-              ? 'border-primary-400 bg-primary-50 shadow-md'
-              : 'border-gray-200 hover:border-primary-200'
-          }`}
-        >
-          <div className="w-16 h-16 bg-primary-100 rounded-lg flex items-center justify-center mb-4">
-            <DollarSign className="w-8 h-8 text-primary-400" />
-          </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Selling a property</h3>
-          <p className="text-gray-600">Ready to list your property for sale</p>
-          {formData.propertyIntent === 'selling' && (
-            <div className="mt-4 flex items-center gap-2 text-primary-400 font-medium">
-              <CheckCircle2 className="w-5 h-5" />
-              Selected
-            </div>
-          )}
-        </button>
+          return (
+            <button
+              key={option.value}
+              onClick={() =>
+                setFormData((prev) => ({
+                  ...prev,
+                  propertyIntent: option.value,
+                }))
+              }
+              className={`p-6 rounded-lg border-2 transition-all text-left hover:shadow-lg ${
+                isSelected
+                  ? 'border-primary-400 bg-primary-50 shadow-md'
+                  : 'border-gray-200 hover:border-primary-200'
+              }`}
+            >
+              <div className="w-14 h-14 bg-primary-100 rounded-lg flex items-center justify-center mb-4">
+                <Icon className="w-7 h-7 text-primary-400" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">{option.title}</h3>
+              <p className="text-sm text-gray-600">{option.description}</p>
+              {isSelected && (
+                <div className="mt-4 flex items-center gap-2 text-primary-400 font-medium">
+                  <CheckCircle2 className="w-5 h-5" />
+                  Selected
+                </div>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {errors.propertyIntent && (
@@ -932,36 +995,41 @@ function Step3ABuyerQuestions({ formData, setFormData, errors, onNext, onBack }:
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Price Range <span className="text-red-500">*</span>
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Budget Range <span className="text-red-500">*</span>
           </label>
-          <div className="px-4 py-6 bg-gray-50 rounded-lg">
-            <div className="flex justify-between text-sm text-gray-600 mb-4">
-              <span className="font-bold text-primary-400">
-                {formatCurrency(formData.buyerQuestions!.priceRange.min)}
-              </span>
-              <span className="font-bold text-primary-400">
-                {formatCurrency(formData.buyerQuestions!.priceRange.max)}
-              </span>
-            </div>
-            <input
-              type="range"
-              min={200000}
-              max={2000000}
-              step={10000}
-              value={formData.buyerQuestions!.priceRange.max}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  buyerQuestions: {
-                    ...prev.buyerQuestions!,
-                    priceRange: { ...prev.buyerQuestions!.priceRange, max: parseInt(e.target.value) },
-                  },
-                }))
-              }
-              className="w-full"
-            />
+          <div className="space-y-2">
+            {BUDGET_RANGES.map((range) => (
+              <label
+                key={range}
+                className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+              >
+                <input
+                  type="radio"
+                  name="budgetRange"
+                  value={range}
+                  checked={formData.buyerQuestions!.budgetRange === range}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      buyerQuestions: {
+                        ...prev.buyerQuestions!,
+                        budgetRange: e.target.value,
+                      },
+                    }))
+                  }
+                  className="w-4 h-4 text-primary-400 focus:ring-primary-400"
+                />
+                <span className="text-gray-900">{range}</span>
+              </label>
+            ))}
           </div>
+          {errors.budgetRange && (
+            <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+              <AlertCircle className="w-4 h-4" />
+              {errors.budgetRange}
+            </p>
+          )}
         </div>
 
         <div>
@@ -1008,10 +1076,10 @@ function Step3ABuyerQuestions({ formData, setFormData, errors, onNext, onBack }:
             }`}
           >
             <option value="">Select timeline</option>
-            <option value="0-3">0-3 months</option>
-            <option value="3-6">3-6 months</option>
-            <option value="6-12">6-12 months</option>
-            <option value="12+">12+ months</option>
+            <option value="Ready to buy in next 3 months">Ready to buy in next 3 months</option>
+            <option value="Anytime in next 6 months">Anytime in next 6 months</option>
+            <option value="Some time in next 6-12 months">Some time in next 6-12 months</option>
+            <option value="Unsure at the moment or in next 1-2 years">Unsure at the moment or in next 1-2 years</option>
           </select>
           {errors.timeline && (
             <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
@@ -1058,28 +1126,81 @@ function Step3ABuyerQuestions({ formData, setFormData, errors, onNext, onBack }:
               {errors.preApprovalStatus}
             </p>
           )}
+
+          {formData.buyerQuestions!.preApprovalStatus === 'yes' && (
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Approved Amount <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.buyerQuestions!.mortgageApprovedAmount}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    buyerQuestions: {
+                      ...prev.buyerQuestions!,
+                      mortgageApprovedAmount: e.target.value,
+                    },
+                  }))
+                }
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
+                  errors.mortgageApprovedAmount ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="e.g., $1,200,000"
+              />
+              {errors.mortgageApprovedAmount && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.mortgageApprovedAmount}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <div>
-          <label className="flex items-center gap-3 p-4 border-2 border-yellow-300 bg-yellow-50 rounded-lg">
-            <input
-              type="checkbox"
-              checked={formData.buyerQuestions!.hasCurrentAgent}
-              onChange={(e) =>
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Primary Residence <span className="text-red-500">*</span>
+          </label>
+          <div className="flex gap-3">
+            <button
+              onClick={() =>
                 setFormData((prev) => ({
                   ...prev,
-                  buyerQuestions: { ...prev.buyerQuestions!, hasCurrentAgent: e.target.checked },
+                  buyerQuestions: { ...prev.buyerQuestions!, isPrimaryResidence: true },
                 }))
               }
-              className="w-5 h-5 text-primary-400 focus:ring-primary-400"
-            />
-            <div>
-              <div className="font-medium text-gray-900">I currently have a real estate agent</div>
-              <div className="text-sm text-gray-600">
-                Note: If you're under contract with an agent, matching may not be possible
-              </div>
-            </div>
-          </label>
+              className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
+                formData.buyerQuestions!.isPrimaryResidence === true
+                  ? 'bg-primary-400 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Yes
+            </button>
+            <button
+              onClick={() =>
+                setFormData((prev) => ({
+                  ...prev,
+                  buyerQuestions: { ...prev.buyerQuestions!, isPrimaryResidence: false },
+                }))
+              }
+              className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
+                formData.buyerQuestions!.isPrimaryResidence === false
+                  ? 'bg-primary-400 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              No
+            </button>
+          </div>
+          {errors.isPrimaryResidence && (
+            <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+              <AlertCircle className="w-4 h-4" />
+              {errors.isPrimaryResidence}
+            </p>
+          )}
         </div>
 
         <div>
@@ -1126,16 +1247,12 @@ function Step3ABuyerQuestions({ formData, setFormData, errors, onNext, onBack }:
 }
 
 function Step3BSellerQuestions({ formData, setFormData, errors, onNext, onBack }: StepProps) {
-  const formatCurrency = (value: string) => {
-    const num = value.replace(/\D/g, '');
-    if (!num) return '';
-    return new Intl.NumberFormat('en-CA', {
-      style: 'currency',
-      currency: 'CAD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(parseInt(num));
-  };
+  const [citySearch, setCitySearch] = useState('');
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
+
+  const filteredCities = ONTARIO_CITIES.filter((city) =>
+    city.toLowerCase().includes(citySearch.toLowerCase())
+  );
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-8">
@@ -1180,56 +1297,139 @@ function Step3BSellerQuestions({ formData, setFormData, errors, onNext, onBack }
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Property Location <span className="text-red-500">*</span>
+            City <span className="text-red-500">*</span>
           </label>
-          <input
-            type="text"
-            value={formData.sellerQuestions!.propertyLocation}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                sellerQuestions: { ...prev.sellerQuestions!, propertyLocation: e.target.value },
-              }))
-            }
-            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
-              errors.propertyLocation ? 'border-red-500' : 'border-gray-300'
-            }`}
-            placeholder="City, Province"
-          />
-          {errors.propertyLocation && (
+          <div className="relative">
+            <input
+              type="text"
+              value={formData.sellerQuestions!.city || citySearch}
+              onChange={(e) => {
+                setCitySearch(e.target.value);
+                setShowCityDropdown(true);
+                if (!e.target.value) {
+                  setFormData((prev) => ({
+                    ...prev,
+                    sellerQuestions: { ...prev.sellerQuestions!, city: '' },
+                  }));
+                }
+              }}
+              onFocus={() => setShowCityDropdown(true)}
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
+                errors.city ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Search for city..."
+            />
+            {showCityDropdown && filteredCities.length > 0 && !formData.sellerQuestions!.city && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {filteredCities.slice(0, 10).map((city) => (
+                  <button
+                    key={city}
+                    onClick={() => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        sellerQuestions: { ...prev.sellerQuestions!, city },
+                      }));
+                      setCitySearch('');
+                      setShowCityDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors"
+                  >
+                    {city}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {formData.sellerQuestions!.city && (
+            <div className="flex items-center gap-2 mt-2">
+              <span className="inline-flex items-center gap-2 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm">
+                {formData.sellerQuestions!.city}
+                <button
+                  onClick={() => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      sellerQuestions: { ...prev.sellerQuestions!, city: '' },
+                    }));
+                    setCitySearch('');
+                  }}
+                  className="hover:bg-primary-100 rounded-full p-0.5 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            </div>
+          )}
+          {errors.city && (
             <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
               <AlertCircle className="w-4 h-4" />
-              {errors.propertyLocation}
+              {errors.city}
             </p>
           )}
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Estimated Property Value <span className="text-red-500">*</span>
+            Major Intersection or Address <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
-            value={formatCurrency(formData.sellerQuestions!.estimatedValue.toString())}
-            onChange={(e) => {
-              const num = e.target.value.replace(/\D/g, '');
+            value={formData.sellerQuestions!.intersectionOrAddress}
+            onChange={(e) =>
               setFormData((prev) => ({
                 ...prev,
-                sellerQuestions: {
-                  ...prev.sellerQuestions!,
-                  estimatedValue: parseInt(num) || 0,
-                },
+                sellerQuestions: { ...prev.sellerQuestions!, intersectionOrAddress: e.target.value },
               }))
-            }}
+            }
             className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
-              errors.estimatedValue ? 'border-red-500' : 'border-gray-300'
+              errors.intersectionOrAddress ? 'border-red-500' : 'border-gray-300'
             }`}
-            placeholder="$500,000"
+            placeholder="e.g., Yonge St & Bloor St or 123 Main Street"
           />
-          {errors.estimatedValue && (
+          <p className="text-xs text-gray-500 mt-1">
+            We want to be respectful of your privacy. We are asking for this information because this helps agents prepare well for their first conversation with you.
+          </p>
+          {errors.intersectionOrAddress && (
             <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
               <AlertCircle className="w-4 h-4" />
-              {errors.estimatedValue}
+              {errors.intersectionOrAddress}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Price Expectation <span className="text-red-500">*</span>
+          </label>
+          <div className="space-y-2">
+            {PRICE_EXPECTATION_RANGES.map((range) => (
+              <label
+                key={range}
+                className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+              >
+                <input
+                  type="radio"
+                  name="priceExpectationRange"
+                  value={range}
+                  checked={formData.sellerQuestions!.priceExpectationRange === range}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      sellerQuestions: {
+                        ...prev.sellerQuestions!,
+                        priceExpectationRange: e.target.value,
+                      },
+                    }))
+                  }
+                  className="w-4 h-4 text-primary-400 focus:ring-primary-400"
+                />
+                <span className="text-gray-900">{range}</span>
+              </label>
+            ))}
+          </div>
+          {errors.priceExpectationRange && (
+            <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+              <AlertCircle className="w-4 h-4" />
+              {errors.priceExpectationRange}
             </p>
           )}
         </div>
@@ -1251,10 +1451,10 @@ function Step3BSellerQuestions({ formData, setFormData, errors, onNext, onBack }
             }`}
           >
             <option value="">Select timeline</option>
-            <option value="immediate">Immediately</option>
-            <option value="1-3">1-3 months</option>
-            <option value="3-6">3-6 months</option>
-            <option value="6+">6+ months</option>
+            <option value="At the earliest possible">At the earliest possible</option>
+            <option value="Anytime in the next 6 months">Anytime in the next 6 months</option>
+            <option value="Sometime in the next 6-10 months">Sometime in the next 6-10 months</option>
+            <option value="Unsure at the moment">Unsure at the moment</option>
           </select>
           {errors.sellingTimeline && (
             <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
@@ -1368,6 +1568,628 @@ function Step3BSellerQuestions({ formData, setFormData, errors, onNext, onBack }
   );
 }
 
+function Step3CCombinedQuestions({ formData, setFormData, errors, onNext, onBack }: StepProps) {
+  const [buyerCitySearch, setBuyerCitySearch] = useState('');
+  const [showBuyerCityDropdown, setShowBuyerCityDropdown] = useState(false);
+  const [sellerCitySearch, setSellerCitySearch] = useState('');
+  const [showSellerCityDropdown, setShowSellerCityDropdown] = useState(false);
+
+  const filteredBuyerCities = ONTARIO_CITIES.filter(
+    (city) =>
+      city.toLowerCase().includes(buyerCitySearch.toLowerCase()) &&
+      !formData.buyerQuestions!.preferredCities.includes(city)
+  );
+
+  const filteredSellerCities = ONTARIO_CITIES.filter((city) =>
+    city.toLowerCase().includes(sellerCitySearch.toLowerCase())
+  );
+
+  const addBuyerCity = (city: string) => {
+    if (formData.buyerQuestions!.preferredCities.length < 3) {
+      setFormData((prev) => ({
+        ...prev,
+        buyerQuestions: {
+          ...prev.buyerQuestions!,
+          preferredCities: [...prev.buyerQuestions!.preferredCities, city],
+        },
+      }));
+      setBuyerCitySearch('');
+      setShowBuyerCityDropdown(false);
+    }
+  };
+
+  const removeBuyerCity = (city: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      buyerQuestions: {
+        ...prev.buyerQuestions!,
+        preferredCities: prev.buyerQuestions!.preferredCities.filter((c) => c !== city),
+      },
+    }));
+  };
+
+  const togglePropertyType = (type: string) => {
+    const current = formData.buyerQuestions!.propertyTypes;
+    setFormData((prev) => ({
+      ...prev,
+      buyerQuestions: {
+        ...prev.buyerQuestions!,
+        propertyTypes: current.includes(type)
+          ? current.filter((t) => t !== type)
+          : [...current, type],
+      },
+    }));
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm p-8">
+      <h2 className="text-2xl font-bold text-gray-900 mb-2">Tell us about your home journey</h2>
+      <p className="text-gray-600 mb-6">Since you're selling and buying, we need details about both.</p>
+
+      <div className="space-y-8">
+        <div className="border-t border-gray-200 pt-6">
+          <h3 className="text-xl font-bold text-gray-900 mb-4">Buying Information</h3>
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Preferred Cities <span className="text-red-500">*</span>
+                <span className="text-gray-500 font-normal ml-2">(Select up to 3)</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={buyerCitySearch}
+                  onChange={(e) => {
+                    setBuyerCitySearch(e.target.value);
+                    setShowBuyerCityDropdown(true);
+                  }}
+                  onFocus={() => setShowBuyerCityDropdown(true)}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
+                    errors.preferredCities ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Search for cities..."
+                  disabled={formData.buyerQuestions!.preferredCities.length >= 3}
+                />
+                {showBuyerCityDropdown && filteredBuyerCities.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {filteredBuyerCities.slice(0, 10).map((city) => (
+                      <button
+                        key={city}
+                        onClick={() => addBuyerCity(city)}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors"
+                      >
+                        {city}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2 mt-3">
+                {formData.buyerQuestions!.preferredCities.map((city) => (
+                  <span
+                    key={city}
+                    className="inline-flex items-center gap-2 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm"
+                  >
+                    {city}
+                    <button
+                      onClick={() => removeBuyerCity(city)}
+                      className="hover:bg-primary-100 rounded-full p-0.5 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              {errors.preferredCities && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.preferredCities}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Budget Range <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {BUDGET_RANGES.map((range) => (
+                  <label
+                    key={range}
+                    className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                  >
+                    <input
+                      type="radio"
+                      name="budgetRange"
+                      value={range}
+                      checked={formData.buyerQuestions!.budgetRange === range}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          buyerQuestions: {
+                            ...prev.buyerQuestions!,
+                            budgetRange: e.target.value,
+                          },
+                        }))
+                      }
+                      className="w-4 h-4 text-primary-400 focus:ring-primary-400"
+                    />
+                    <span className="text-gray-900 text-sm">{range}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.budgetRange && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.budgetRange}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Property Types <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {PROPERTY_TYPES.map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => togglePropertyType(type)}
+                    className={`px-4 py-3 rounded-lg border-2 transition-all font-medium text-sm ${
+                      formData.buyerQuestions!.propertyTypes.includes(type)
+                        ? 'border-primary-400 bg-primary-50 text-primary-700'
+                        : 'border-gray-200 text-gray-700 hover:border-primary-200'
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+              {errors.propertyTypes && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.propertyTypes}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Timeline <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.buyerQuestions!.timeline}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    buyerQuestions: { ...prev.buyerQuestions!, timeline: e.target.value },
+                  }))
+                }
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
+                  errors.timeline ? 'border-red-500' : 'border-gray-300'
+                }`}
+              >
+                <option value="">Select timeline</option>
+                <option value="Ready to buy in next 3 months">Ready to buy in next 3 months</option>
+                <option value="Anytime in next 6 months">Anytime in next 6 months</option>
+                <option value="Some time in next 6-12 months">Some time in next 6-12 months</option>
+                <option value="Unsure at the moment or in next 1-2 years">Unsure at the moment or in next 1-2 years</option>
+              </select>
+              {errors.timeline && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.timeline}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Mortgage Pre-Approval Status <span className="text-red-500">*</span>
+              </label>
+              <div className="space-y-2">
+                {[
+                  { value: 'yes', label: 'Yes, I have pre-approval' },
+                  { value: 'in_progress', label: 'In progress' },
+                  { value: 'no', label: 'No, not yet' },
+                ].map((option) => (
+                  <label key={option.value} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="preApproval"
+                      value={option.value}
+                      checked={formData.buyerQuestions!.preApprovalStatus === option.value}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          buyerQuestions: {
+                            ...prev.buyerQuestions!,
+                            preApprovalStatus: e.target.value as any,
+                          },
+                        }))
+                      }
+                      className="w-4 h-4 text-primary-400 focus:ring-primary-400"
+                    />
+                    <span className="text-gray-900">{option.label}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.preApprovalStatus && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.preApprovalStatus}
+                </p>
+              )}
+
+              {formData.buyerQuestions!.preApprovalStatus === 'yes' && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Approved Amount <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.buyerQuestions!.mortgageApprovedAmount}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        buyerQuestions: {
+                          ...prev.buyerQuestions!,
+                          mortgageApprovedAmount: e.target.value,
+                        },
+                      }))
+                    }
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
+                      errors.mortgageApprovedAmount ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="e.g., $1,200,000"
+                  />
+                  {errors.mortgageApprovedAmount && (
+                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.mortgageApprovedAmount}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Primary Residence <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-3">
+                <button
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      buyerQuestions: { ...prev.buyerQuestions!, isPrimaryResidence: true },
+                    }))
+                  }
+                  className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
+                    formData.buyerQuestions!.isPrimaryResidence === true
+                      ? 'bg-primary-400 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      buyerQuestions: { ...prev.buyerQuestions!, isPrimaryResidence: false },
+                    }))
+                  }
+                  className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
+                    formData.buyerQuestions!.isPrimaryResidence === false
+                      ? 'bg-primary-400 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  No
+                </button>
+              </div>
+              {errors.isPrimaryResidence && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.isPrimaryResidence}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-gray-200 pt-6">
+          <h3 className="text-xl font-bold text-gray-900 mb-4">Selling Information</h3>
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Property Type <span className="text-red-500">*</span>
+              </label>
+              <div className="space-y-2">
+                {PROPERTY_TYPES.concat(['Other']).map((type) => (
+                  <label
+                    key={type}
+                    className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                  >
+                    <input
+                      type="radio"
+                      name="sellerPropertyType"
+                      value={type}
+                      checked={formData.sellerQuestions!.propertyType === type}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          sellerQuestions: { ...prev.sellerQuestions!, propertyType: e.target.value },
+                        }))
+                      }
+                      className="w-4 h-4 text-primary-400 focus:ring-primary-400"
+                    />
+                    <span className="text-gray-900">{type}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.propertyType && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.propertyType}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                City <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={formData.sellerQuestions!.city || sellerCitySearch}
+                  onChange={(e) => {
+                    setSellerCitySearch(e.target.value);
+                    setShowSellerCityDropdown(true);
+                    if (!e.target.value) {
+                      setFormData((prev) => ({
+                        ...prev,
+                        sellerQuestions: { ...prev.sellerQuestions!, city: '' },
+                      }));
+                    }
+                  }}
+                  onFocus={() => setShowSellerCityDropdown(true)}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
+                    errors.city ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Search for city..."
+                />
+                {showSellerCityDropdown && filteredSellerCities.length > 0 && !formData.sellerQuestions!.city && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {filteredSellerCities.slice(0, 10).map((city) => (
+                      <button
+                        key={city}
+                        onClick={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            sellerQuestions: { ...prev.sellerQuestions!, city },
+                          }));
+                          setSellerCitySearch('');
+                          setShowSellerCityDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors"
+                      >
+                        {city}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {formData.sellerQuestions!.city && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="inline-flex items-center gap-2 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-sm">
+                    {formData.sellerQuestions!.city}
+                    <button
+                      onClick={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          sellerQuestions: { ...prev.sellerQuestions!, city: '' },
+                        }));
+                        setSellerCitySearch('');
+                      }}
+                      className="hover:bg-primary-100 rounded-full p-0.5 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                </div>
+              )}
+              {errors.city && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.city}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Major Intersection or Address <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.sellerQuestions!.intersectionOrAddress}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    sellerQuestions: { ...prev.sellerQuestions!, intersectionOrAddress: e.target.value },
+                  }))
+                }
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
+                  errors.intersectionOrAddress ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="e.g., Yonge St & Bloor St or 123 Main Street"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                We want to be respectful of your privacy. We are asking for this information because this helps agents prepare well for their first conversation with you.
+              </p>
+              {errors.intersectionOrAddress && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.intersectionOrAddress}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Price Expectation <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {PRICE_EXPECTATION_RANGES.map((range) => (
+                  <label
+                    key={range}
+                    className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                  >
+                    <input
+                      type="radio"
+                      name="priceExpectationRange"
+                      value={range}
+                      checked={formData.sellerQuestions!.priceExpectationRange === range}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          sellerQuestions: {
+                            ...prev.sellerQuestions!,
+                            priceExpectationRange: e.target.value,
+                          },
+                        }))
+                      }
+                      className="w-4 h-4 text-primary-400 focus:ring-primary-400"
+                    />
+                    <span className="text-gray-900 text-sm">{range}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.priceExpectationRange && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.priceExpectationRange}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Selling Timeline <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.sellerQuestions!.sellingTimeline}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    sellerQuestions: { ...prev.sellerQuestions!, sellingTimeline: e.target.value },
+                  }))
+                }
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
+                  errors.sellingTimeline ? 'border-red-500' : 'border-gray-300'
+                }`}
+              >
+                <option value="">Select timeline</option>
+                <option value="At the earliest possible">At the earliest possible</option>
+                <option value="Anytime in the next 6 months">Anytime in the next 6 months</option>
+                <option value="Sometime in the next 6-10 months">Sometime in the next 6-10 months</option>
+                <option value="Unsure at the moment">Unsure at the moment</option>
+              </select>
+              {errors.sellingTimeline && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.sellingTimeline}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Reason for Selling <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.sellerQuestions!.sellingReason}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    sellerQuestions: { ...prev.sellerQuestions!, sellingReason: e.target.value },
+                  }))
+                }
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
+                  errors.sellingReason ? 'border-red-500' : 'border-gray-300'
+                }`}
+              >
+                <option value="">Select reason</option>
+                <option value="upsizing">Upsizing</option>
+                <option value="downsizing">Downsizing</option>
+                <option value="relocation">Relocation</option>
+                <option value="investment">Investment property</option>
+                <option value="other">Other</option>
+              </select>
+              {errors.sellingReason && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.sellingReason}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Property Condition <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.sellerQuestions!.propertyCondition}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    sellerQuestions: { ...prev.sellerQuestions!, propertyCondition: e.target.value },
+                  }))
+                }
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
+                  errors.propertyCondition ? 'border-red-500' : 'border-gray-300'
+                }`}
+              >
+                <option value="">Select condition</option>
+                <option value="excellent">Excellent - Move-in ready</option>
+                <option value="good">Good - Minor updates needed</option>
+                <option value="fair">Fair - Some renovations needed</option>
+                <option value="needs-work">Needs significant work</option>
+              </select>
+              {errors.propertyCondition && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.propertyCondition}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-between mt-8">
+        <button
+          onClick={onBack}
+          className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium flex items-center gap-2"
+        >
+          <ChevronLeft className="w-5 h-5" />
+          Back
+        </button>
+        <button
+          onClick={onNext}
+          className="px-6 py-3 bg-primary-400 text-white rounded-lg hover:bg-primary-500 transition-colors font-medium flex items-center gap-2"
+        >
+          Continue
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 interface Step4Props extends StepProps {
   onSubmit: () => void;
   goToStep: (step: number) => void;
@@ -1437,12 +2259,15 @@ function Step4Review({ formData, setFormData, errors, onSubmit, onBack, goToStep
           </div>
           <div className="text-sm">
             <span className="inline-flex items-center px-3 py-1 bg-primary-50 text-primary-700 rounded-full font-medium">
-              {formData.propertyIntent === 'buying' ? 'Buying a home' : 'Selling a property'}
+              {formData.propertyIntent === 'buy-first' && 'Buy my first home'}
+              {formData.propertyIntent === 'buy-another' && 'Buy another home'}
+              {formData.propertyIntent === 'sell-current' && 'Sell my current home'}
+              {formData.propertyIntent === 'sell-and-buy' && 'Sell my current home to buy another home'}
             </span>
           </div>
         </div>
 
-        {formData.propertyIntent === 'buying' && formData.buyerQuestions && (
+        {(formData.propertyIntent === 'buy-first' || formData.propertyIntent === 'buy-another' || formData.propertyIntent === 'sell-and-buy') && formData.buyerQuestions && (
           <div className="p-4 border border-gray-200 rounded-lg">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-gray-900">Buyer Requirements</h3>
@@ -1462,10 +2287,9 @@ function Step4Review({ formData, setFormData, errors, onSubmit, onBack, goToStep
                 </span>
               </div>
               <div>
-                <span className="text-gray-600">Price Range:</span>{' '}
+                <span className="text-gray-600">Budget Range:</span>{' '}
                 <span className="text-gray-900 font-medium">
-                  {formatCurrency(formData.buyerQuestions.priceRange.min)} -{' '}
-                  {formatCurrency(formData.buyerQuestions.priceRange.max)}
+                  {formData.buyerQuestions.budgetRange}
                 </span>
               </div>
               <div>
@@ -1476,7 +2300,7 @@ function Step4Review({ formData, setFormData, errors, onSubmit, onBack, goToStep
               </div>
               <div>
                 <span className="text-gray-600">Timeline:</span>{' '}
-                <span className="text-gray-900 font-medium">{formData.buyerQuestions.timeline} months</span>
+                <span className="text-gray-900 font-medium">{formData.buyerQuestions.timeline}</span>
               </div>
               <div>
                 <span className="text-gray-600">Pre-Approval:</span>{' '}
@@ -1488,11 +2312,23 @@ function Step4Review({ formData, setFormData, errors, onSubmit, onBack, goToStep
                     : 'No'}
                 </span>
               </div>
+              {formData.buyerQuestions.mortgageApprovedAmount && (
+                <div>
+                  <span className="text-gray-600">Approved Amount:</span>{' '}
+                  <span className="text-gray-900 font-medium">{formData.buyerQuestions.mortgageApprovedAmount}</span>
+                </div>
+              )}
+              <div>
+                <span className="text-gray-600">Primary Residence:</span>{' '}
+                <span className="text-gray-900 font-medium">
+                  {formData.buyerQuestions.isPrimaryResidence ? 'Yes' : 'No'}
+                </span>
+              </div>
             </div>
           </div>
         )}
 
-        {formData.propertyIntent === 'selling' && formData.sellerQuestions && (
+        {(formData.propertyIntent === 'sell-current' || formData.propertyIntent === 'sell-and-buy') && formData.sellerQuestions && (
           <div className="p-4 border border-gray-200 rounded-lg">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-gray-900">Property Details</h3>
@@ -1510,15 +2346,21 @@ function Step4Review({ formData, setFormData, errors, onSubmit, onBack, goToStep
                 <span className="text-gray-900 font-medium">{formData.sellerQuestions.propertyType}</span>
               </div>
               <div>
-                <span className="text-gray-600">Location:</span>{' '}
+                <span className="text-gray-600">City:</span>{' '}
                 <span className="text-gray-900 font-medium">
-                  {formData.sellerQuestions.propertyLocation}
+                  {formData.sellerQuestions.city}
                 </span>
               </div>
               <div>
-                <span className="text-gray-600">Estimated Value:</span>{' '}
+                <span className="text-gray-600">Intersection/Address:</span>{' '}
                 <span className="text-gray-900 font-medium">
-                  {formatCurrency(formData.sellerQuestions.estimatedValue)}
+                  {formData.sellerQuestions.intersectionOrAddress}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-600">Price Expectation:</span>{' '}
+                <span className="text-gray-900 font-medium">
+                  {formData.sellerQuestions.priceExpectationRange}
                 </span>
               </div>
               <div>
@@ -1538,68 +2380,210 @@ function Step4Review({ formData, setFormData, errors, onSubmit, onBack, goToStep
         )}
 
         <div className="p-4 border-2 border-primary-100 bg-primary-50 rounded-lg">
-          <h3 className="font-bold text-gray-900 mb-4">Consent & Privacy</h3>
-          <div className="space-y-4">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.consent.contactConsent}
+          <h3 className="font-bold text-gray-900 mb-4">General Questions & Consent</h3>
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-3">
+                Already signed contract with agent? <span className="text-red-500">*</span>
+              </label>
+              <p className="text-xs text-gray-600 mb-3">
+                Real estate agents mostly get an agreement signed by their client to work with them, a Buyers Representation Agreement for buying a home and a Listing Agreement for selling a home.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      consent: { ...prev.consent, hasCurrentAgent: true },
+                    }))
+                  }
+                  className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
+                    formData.consent.hasCurrentAgent === true
+                      ? 'bg-primary-400 text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                  }`}
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      consent: { ...prev.consent, hasCurrentAgent: false },
+                    }))
+                  }
+                  className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
+                    formData.consent.hasCurrentAgent === false
+                      ? 'bg-primary-400 text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                  }`}
+                >
+                  No
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-3">
+                Contact Preference <span className="text-red-500">*</span>
+              </label>
+              <div className="space-y-2">
+                {[
+                  { value: 'call', label: 'Call' },
+                  { value: 'whatsapp', label: 'WhatsApp/Text SMS' },
+                  { value: 'email', label: 'Email' },
+                ].map((option) => (
+                  <label
+                    key={option.value}
+                    className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                  >
+                    <input
+                      type="radio"
+                      name="contactPreference"
+                      value={option.value}
+                      checked={formData.consent.contactPreference === option.value}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          consent: { ...prev.consent, contactPreference: e.target.value as any },
+                        }))
+                      }
+                      className="w-4 h-4 text-primary-400 focus:ring-primary-400"
+                    />
+                    <span className="text-gray-900">{option.label}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.contactPreference && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.contactPreference}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Anything else we need to know?
+              </label>
+              <p className="text-xs text-gray-600 mb-2">
+                That can help us find you the best options on the real estate services.
+              </p>
+              <textarea
+                value={formData.consent.additionalNotes}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    consent: { ...prev.consent, contactConsent: e.target.checked },
+                    consent: { ...prev.consent, additionalNotes: e.target.value },
                   }))
                 }
-                className="w-5 h-5 text-primary-400 focus:ring-primary-400 mt-0.5"
+                maxLength={500}
+                rows={4}
+                className="w-full px-4 py-3 border border-gray-300 bg-white rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 resize-none"
+                placeholder="Any additional information you'd like to share..."
               />
-              <div className="text-sm">
-                <div className="font-medium text-gray-900">
-                  I consent to being contacted <span className="text-red-500">*</span>
+              <div className="text-xs text-gray-500 text-right mt-1">
+                {formData.consent.additionalNotes?.length || 0} / 500
+              </div>
+            </div>
+
+            <div>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.consent.communicationConsent}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      consent: { ...prev.consent, communicationConsent: e.target.checked },
+                    }))
+                  }
+                  className="w-5 h-5 text-primary-400 focus:ring-primary-400 mt-0.5"
+                />
+                <div className="text-sm">
+                  <div className="font-medium text-gray-900">
+                    Communication Consent <span className="text-red-500">*</span>
+                  </div>
+                  <div className="text-gray-600">
+                    We promise we won't spam your inbox. We will make the agent introductions over email and occasionally get in touch with you over the phone, text, email, or WhatsApp to check in or follow up. Your information will not be shared with anyone else. Please report to us if anyone else contacts you with our name.
+                  </div>
                 </div>
-                <div className="text-gray-600">
-                  You agree to be contacted by matched real estate agents via phone or email.
+              </label>
+              {errors.communicationConsent && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.communicationConsent}
+                </p>
+              )}
+            </div>
+
+            <div className="border-t border-gray-200 pt-4">
+              <div className="bg-white rounded-lg p-4 mb-4">
+                <h4 className="font-bold text-gray-900 mb-3">Terms and Conditions</h4>
+                <div className="space-y-2 text-xs text-gray-700">
+                  <div className="flex gap-2">
+                    <span className="font-medium">1.</span>
+                    <span>You understand and agree that the information you have provided is true and correct.</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="font-medium">2.</span>
+                    <span>You understand and agree that you will be introduced initially to three agents only who are interested in offering their real estate services to you. You can request more agents at any time.</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="font-medium">3.</span>
+                    <span>You understand and agree that the real estate agents suggested by Hausee don't represent Hausee, they represent the respective brokerage they are associated with.</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="font-medium">4.</span>
+                    <span>You understand and agree that the real estate agents introduced by Hausee to you are only agent suggestions by Hausee, not agent referrals by Hausee.</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="font-medium">5.</span>
+                    <span>You understand and agree that the decision you make on the real estate agent to work with is solely yours and yours only and Hausee can't be held responsible for any losses or damages.</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="font-medium">6.</span>
+                    <span>You understand and agree that you will respond to the real estate agent's first communication to you through your preferred channel within 24 hrs or the earliest possible.</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="font-medium">7.</span>
+                    <span>You understand and agree that you can be released anytime from the representation agreement for home buying and selling if you are dissatisfied with their services but it is contingent on the mutual agreement among you, the client, the real estate agent, and the representing brokerage.</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="font-medium">8.</span>
+                    <span>You understand and agree to provide updates on the progress of your home buying or selling journey with the real estate agent suggested by Hausee.</span>
+                  </div>
                 </div>
               </div>
-            </label>
-            {errors.contactConsent && (
-              <p className="text-red-500 text-sm flex items-center gap-1">
-                <AlertCircle className="w-4 h-4" />
-                {errors.contactConsent}
-              </p>
-            )}
 
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.consent.sharingConsent}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    consent: { ...prev.consent, sharingConsent: e.target.checked },
-                  }))
-                }
-                className="w-5 h-5 text-primary-400 focus:ring-primary-400 mt-0.5"
-              />
-              <div className="text-sm">
-                <div className="font-medium text-gray-900">
-                  I consent to information sharing <span className="text-red-500">*</span>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.consent.termsAccepted}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      consent: { ...prev.consent, termsAccepted: e.target.checked },
+                    }))
+                  }
+                  className="w-5 h-5 text-primary-400 focus:ring-primary-400 mt-0.5"
+                />
+                <div className="text-sm">
+                  <div className="font-medium text-gray-900">
+                    I accept all terms <span className="text-red-500">*</span>
+                  </div>
+                  <div className="text-gray-600">
+                    By checking this box, you agree to all the terms and conditions listed above.
+                  </div>
                 </div>
-                <div className="text-gray-600">
-                  Your information will be shared with carefully selected agents for matching purposes.
-                </div>
-              </div>
-            </label>
-            {errors.sharingConsent && (
-              <p className="text-red-500 text-sm flex items-center gap-1">
-                <AlertCircle className="w-4 h-4" />
-                {errors.sharingConsent}
-              </p>
-            )}
-          </div>
-
-          <div className="mt-4 p-3 bg-white rounded-lg text-xs text-gray-600">
-            <strong>Privacy Notice:</strong> Your information is secure and will only be shared with licensed
-            real estate professionals. We will never sell your data to third parties.
+              </label>
+              {errors.termsAccepted && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {errors.termsAccepted}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -1636,9 +2620,12 @@ function Step5Confirmation({ onComplete }: Step5Props) {
       </div>
 
       <h2 className="text-3xl font-bold text-gray-900 mb-4">Request Submitted!</h2>
-      <p className="text-gray-600 text-lg mb-8">
+      <p className="text-gray-600 text-lg mb-4">
         Thank you for submitting your agent matching request. We're working on finding the perfect agent for
         you.
+      </p>
+      <p className="text-gray-600 mb-8">
+        This is completely <span className="font-semibold text-primary-400">no obligation</span> - you're free to explore your options without any commitment.
       </p>
 
       <div className="max-w-lg mx-auto text-left bg-gray-50 rounded-lg p-6 mb-8">
@@ -1663,7 +2650,7 @@ function Step5Confirmation({ onComplete }: Step5Props) {
             <div>
               <div className="font-medium text-gray-900">Agent Match</div>
               <div className="text-sm text-gray-600">
-                We'll match you with 1-3 qualified agents in your area
+                You'll be introduced to 3 agents initially, with the option to request more at any time
               </div>
             </div>
           </div>

@@ -478,21 +478,20 @@ export interface AboutYouData {
 
 export interface BuyerQuestionsData {
   preferredCities: string[];
-  priceRange: {
-    min: number;
-    max: number;
-  };
+  budgetRange: string;
   propertyTypes: string[];
   timeline: string;
   preApprovalStatus: 'yes' | 'no' | 'in_progress' | '';
-  hasCurrentAgent: boolean;
+  mortgageApprovedAmount?: string;
+  isPrimaryResidence: boolean | null;
   additionalComments?: string;
 }
 
 export interface SellerQuestionsData {
   propertyType: string;
-  propertyLocation: string;
-  estimatedValue: number;
+  city: string;
+  intersectionOrAddress: string;
+  priceExpectationRange: string;
   sellingTimeline: string;
   sellingReason: string;
   propertyCondition: string;
@@ -500,13 +499,16 @@ export interface SellerQuestionsData {
 }
 
 export interface ConsentData {
-  contactConsent: boolean;
-  sharingConsent: boolean;
+  communicationConsent: boolean;
+  termsAccepted: boolean;
+  hasCurrentAgent: boolean;
+  contactPreference: 'call' | 'whatsapp' | 'email' | '';
+  additionalNotes?: string;
 }
 
 export interface SelectFormData {
   aboutYou: AboutYouData;
-  propertyIntent: 'buying' | 'selling' | '';
+  propertyIntent: 'buy-first' | 'buy-another' | 'sell-current' | 'sell-and-buy' | '';
   buyerQuestions?: BuyerQuestionsData;
   sellerQuestions?: SellerQuestionsData;
   consent: ConsentData;
