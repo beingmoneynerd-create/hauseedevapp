@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { validateEmail } from '../utils/validation';
 
 export default function SignInPage() {
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState('');
@@ -13,6 +13,19 @@ export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const returnTo = location.state?.returnTo || '/plan';
+
+  const handleGoogle = async () => {
+    setError('');
+    setIsLoading(true);
+    try {
+      const { error: googleError } = await signInWithGoogle();
+      if (googleError) throw googleError;
+    } catch (err: any) {
+      setError(err.message || 'Google sign-in failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +74,22 @@ export default function SignInPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10">
+          <button
+            onClick={handleGoogle}
+            disabled={isLoading}
+            type="button"
+            className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 rounded-lg py-3 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+            <span className="text-sm font-medium text-gray-800">Continue with Google</span>
+          </button>
+
+          <div className="flex items-center my-6">
+            <div className="flex-1 h-px bg-gray-300" />
+            <span className="px-3 text-xs uppercase text-gray-500">or</span>
+            <div className="flex-1 h-px bg-gray-300" />
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">

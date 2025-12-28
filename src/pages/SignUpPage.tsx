@@ -6,7 +6,7 @@ import { SignUpFormData, FormErrors, UserMetadata } from '../types';
 import { validateEmail, validatePhoneNumber, formatPhoneNumber } from '../utils/validation';
 
 export default function SignUpPage() {
-  const { signUp } = useAuth();
+  const { signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<SignUpFormData>({
@@ -48,6 +48,21 @@ export default function SignUpPage() {
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhoneNumber(e.target.value);
     setFormData({ ...formData, phoneNumber: formatted });
+  };
+
+  const handleGoogle = async () => {
+    setErrors({});
+    setIsLoading(true);
+    try {
+      const { error: googleError } = await signInWithGoogle();
+      if (googleError) throw googleError;
+    } catch (err: any) {
+      setErrors({
+        email: err.message || 'Google sign-in failed',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -103,6 +118,22 @@ export default function SignUpPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10">
+          <button
+            onClick={handleGoogle}
+            disabled={isLoading}
+            type="button"
+            className="w-full flex items-center justify-center gap-2 bg-white border border-gray-300 rounded-lg py-3 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+            <span className="text-sm font-medium text-gray-800">Continue with Google</span>
+          </button>
+
+          <div className="flex items-center my-6">
+            <div className="flex-1 h-px bg-gray-300" />
+            <span className="px-3 text-xs uppercase text-gray-500">or</span>
+            <div className="flex-1 h-px bg-gray-300" />
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
