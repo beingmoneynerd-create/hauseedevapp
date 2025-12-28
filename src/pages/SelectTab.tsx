@@ -22,9 +22,9 @@ export default function SelectTab() {
   return (
     <div className="max-w-4xl mx-auto py-12 px-4">
       <div className="bg-white rounded-lg shadow-sm p-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Find Your Perfect Real Estate Agent</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">Choose the Right Real Estate Agent — On Your Terms</h2>
         <p className="text-gray-600 mb-8">
-          Get matched with experienced agents who understand your needs and the local market.
+          Compare qualified agents, review personalized service offers, and choose who earns your business — with no pressure and no obligation.
         </p>
 
         {hasSubmitted ? (
@@ -44,7 +44,7 @@ export default function SelectTab() {
               <div>
                 <h3 className="font-bold text-gray-900 mb-1">Personalized Matching</h3>
                 <p className="text-gray-600">
-                  We match you with agents based on your specific needs, location, and property type.
+                  We match you with agents based on your goals, timeline, location, and home type — not paid ads or random referrals.
                 </p>
               </div>
             </div>
@@ -56,7 +56,7 @@ export default function SelectTab() {
               <div>
                 <h3 className="font-bold text-gray-900 mb-1">Vetted Professionals</h3>
                 <p className="text-gray-600">
-                  All agents in our network are licensed, experienced, and have proven track records.
+                  All agents are licensed, experienced, and selected specifically for your situation — not just "top sellers."
                 </p>
               </div>
             </div>
@@ -68,7 +68,7 @@ export default function SelectTab() {
               <div>
                 <h3 className="font-bold text-gray-900 mb-1">No Obligation</h3>
                 <p className="text-gray-600">
-                  Meet with agents and choose the one that's right for you. No pressure, no commitment.
+                  Meet up to three agents, compare their approach and service offers, and choose only when it feels right. No pressure. No commitment.
                 </p>
               </div>
             </div>
@@ -119,31 +119,34 @@ export default function SelectTab() {
               <div className="w-10 h-10 bg-primary-400 text-white rounded-full flex items-center justify-center font-bold mx-auto mb-2">
                 1
               </div>
-              <div className="font-medium text-gray-900">Fill Out Form</div>
-              <div className="text-gray-600 text-xs">5-minute questionnaire</div>
+              <div className="font-medium text-gray-900">Tell Us What You Need</div>
+              <div className="text-gray-600 text-xs">Answer a short questionnaire about your goals, timeline, and preferences.</div>
             </div>
             <div className="text-center">
               <div className="w-10 h-10 bg-primary-400 text-white rounded-full flex items-center justify-center font-bold mx-auto mb-2">
                 2
               </div>
-              <div className="font-medium text-gray-900">We Match</div>
-              <div className="text-gray-600 text-xs">24-48 hour turnaround</div>
+              <div className="font-medium text-gray-900">We Curate Your Matches</div>
+              <div className="text-gray-600 text-xs">Within 24–48 hours, we match you with up to three qualified agents who want to earn your business.</div>
             </div>
             <div className="text-center">
               <div className="w-10 h-10 bg-primary-400 text-white rounded-full flex items-center justify-center font-bold mx-auto mb-2">
                 3
               </div>
-              <div className="font-medium text-gray-900">Meet Agents</div>
-              <div className="text-gray-600 text-xs">Interview your matches</div>
+              <div className="font-medium text-gray-900">Meet & Compare</div>
+              <div className="text-gray-600 text-xs">Interview agents, review and compare their service offer, and ask the questions that matter to you.</div>
             </div>
             <div className="text-center">
               <div className="w-10 h-10 bg-primary-400 text-white rounded-full flex items-center justify-center font-bold mx-auto mb-2">
                 4
               </div>
-              <div className="font-medium text-gray-900">Choose</div>
-              <div className="text-gray-600 text-xs">Select your agent</div>
+              <div className="font-medium text-gray-900">Choose Confidently</div>
+              <div className="text-gray-600 text-xs">Pick the agent that feels right — or walk away. There's no obligation to move forward.</div>
             </div>
           </div>
+          <p className="text-sm text-gray-500 text-center mt-6">
+            Hausee is buyer-first. We don't sell your contact info or pressure you to choose an agent.
+          </p>
         </div>
       </div>
 
