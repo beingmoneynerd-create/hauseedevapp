@@ -302,6 +302,7 @@ export default function AgentMatchingForm({ onComplete }: AgentMatchingFormProps
             formData={formData}
             setFormData={setFormData}
             errors={errors}
+            setErrors={setErrors}
             onNext={handleNext}
             otp={otp}
             setOtp={setOtp}
@@ -323,6 +324,7 @@ export default function AgentMatchingForm({ onComplete }: AgentMatchingFormProps
             formData={formData}
             setFormData={setFormData}
             errors={errors}
+            setErrors={setErrors}
             onNext={handleNext}
             onBack={() => goToStep(1)}
           />
@@ -333,6 +335,7 @@ export default function AgentMatchingForm({ onComplete }: AgentMatchingFormProps
             formData={formData}
             setFormData={setFormData}
             errors={errors}
+            setErrors={setErrors}
             onNext={handleNext}
             onBack={() => goToStep(2)}
           />
@@ -343,6 +346,7 @@ export default function AgentMatchingForm({ onComplete }: AgentMatchingFormProps
             formData={formData}
             setFormData={setFormData}
             errors={errors}
+            setErrors={setErrors}
             onNext={handleNext}
             onBack={() => goToStep(2)}
           />
@@ -353,6 +357,7 @@ export default function AgentMatchingForm({ onComplete }: AgentMatchingFormProps
             formData={formData}
             setFormData={setFormData}
             errors={errors}
+            setErrors={setErrors}
             onNext={handleNext}
             onBack={() => goToStep(2)}
           />
@@ -363,6 +368,7 @@ export default function AgentMatchingForm({ onComplete }: AgentMatchingFormProps
             formData={formData}
             setFormData={setFormData}
             errors={errors}
+            setErrors={setErrors}
             onSubmit={handleSubmit}
             onBack={() => goToStep(3)}
             goToStep={goToStep}
@@ -379,6 +385,7 @@ interface StepProps {
   formData: SelectFormData;
   setFormData: React.Dispatch<React.SetStateAction<SelectFormData>>;
   errors: Record<string, string>;
+  setErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   onNext: () => void;
   onBack?: () => void;
 }
@@ -402,6 +409,7 @@ function Step1ContactInfo({
   formData,
   setFormData,
   errors,
+  setErrors,
   onNext,
   otp,
   setOtp,
@@ -416,6 +424,16 @@ function Step1ContactInfo({
   resetOtpState,
   phoneToE164,
 }: Step1ContactInfoProps) {
+  const clearError = (fieldName: string) => {
+    if (errors[fieldName]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
+  };
+
   const formatPhone = (value: string) => {
     const digits = value.replace(/\D/g, '').slice(0, 10);
     if (digits.length <= 3) return digits;
@@ -511,12 +529,15 @@ function Step1ContactInfo({
               <input
                 type="text"
                 value={formData.aboutYou.firstName}
-                onChange={(e) =>
+                onChange={(e) => {
                   setFormData((prev) => ({
                     ...prev,
                     aboutYou: { ...prev.aboutYou, firstName: e.target.value },
-                  }))
-                }
+                  }));
+                  if (e.target.value.length >= 2) {
+                    clearError('firstName');
+                  }
+                }}
                 className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
                   errors.firstName ? 'border-red-500' : 'border-gray-300'
                 }`}
@@ -540,12 +561,15 @@ function Step1ContactInfo({
               <input
                 type="text"
                 value={formData.aboutYou.lastName}
-                onChange={(e) =>
+                onChange={(e) => {
                   setFormData((prev) => ({
                     ...prev,
                     aboutYou: { ...prev.aboutYou, lastName: e.target.value },
-                  }))
-                }
+                  }));
+                  if (e.target.value.length >= 2) {
+                    clearError('lastName');
+                  }
+                }}
                 className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
                   errors.lastName ? 'border-red-500' : 'border-gray-300'
                 }`}
@@ -587,10 +611,14 @@ function Step1ContactInfo({
               value={formData.aboutYou.phone}
               onChange={(e) => {
                 resetOtpState();
+                const formattedPhone = formatPhone(e.target.value);
                 setFormData((prev) => ({
                   ...prev,
-                  aboutYou: { ...prev.aboutYou, phone: formatPhone(e.target.value) },
+                  aboutYou: { ...prev.aboutYou, phone: formattedPhone },
                 }));
+                if (formattedPhone.replace(/\D/g, '').length === 10) {
+                  clearError('phone');
+                }
               }}
               className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
                 errors.phone ? 'border-red-500' : 'border-gray-300'
@@ -742,12 +770,15 @@ function Step1ContactInfo({
               <input
                 type="text"
                 value={formData.aboutYou.referralCode}
-                onChange={(e) =>
+                onChange={(e) => {
                   setFormData((prev) => ({
                     ...prev,
                     aboutYou: { ...prev.aboutYou, referralCode: e.target.value },
-                  }))
-                }
+                  }));
+                  if (e.target.value.trim()) {
+                    clearError('referralCode');
+                  }
+                }}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
                   errors.referralCode ? 'border-red-500' : 'border-gray-300'
                 }`}
@@ -777,7 +808,17 @@ function Step1ContactInfo({
   );
 }
 
-function Step2PropertyIntent({ formData, setFormData, errors, onNext, onBack }: StepProps) {
+function Step2PropertyIntent({ formData, setFormData, errors, setErrors, onNext, onBack }: StepProps) {
+  const clearError = (fieldName: string) => {
+    if (errors[fieldName]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
+  };
+
   const intentOptions = [
     {
       value: 'buy-first' as const,
@@ -818,12 +859,13 @@ function Step2PropertyIntent({ formData, setFormData, errors, onNext, onBack }: 
           return (
             <button
               key={option.value}
-              onClick={() =>
+              onClick={() => {
                 setFormData((prev) => ({
                   ...prev,
                   propertyIntent: option.value,
-                }))
-              }
+                }));
+                clearError('propertyIntent');
+              }}
               className={`p-6 rounded-lg border-2 transition-all text-left hover:shadow-lg ${
                 isSelected
                   ? 'border-primary-400 bg-primary-50 shadow-md'
@@ -873,9 +915,19 @@ function Step2PropertyIntent({ formData, setFormData, errors, onNext, onBack }: 
   );
 }
 
-function Step3ABuyerQuestions({ formData, setFormData, errors, onNext, onBack }: StepProps) {
+function Step3ABuyerQuestions({ formData, setFormData, errors, setErrors, onNext, onBack }: StepProps) {
   const [citySearch, setCitySearch] = useState('');
   const [showCityDropdown, setShowCityDropdown] = useState(false);
+
+  const clearError = (fieldName: string) => {
+    if (errors[fieldName]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
+  };
 
   const filteredCities = ONTARIO_CITIES.filter(
     (city) =>
@@ -894,30 +946,41 @@ function Step3ABuyerQuestions({ formData, setFormData, errors, onNext, onBack }:
       }));
       setCitySearch('');
       setShowCityDropdown(false);
+      if (formData.buyerQuestions!.preferredCities.length >= 0) {
+        clearError('preferredCities');
+      }
     }
   };
 
   const removeCity = (city: string) => {
+    const newCities = formData.buyerQuestions!.preferredCities.filter((c) => c !== city);
     setFormData((prev) => ({
       ...prev,
       buyerQuestions: {
         ...prev.buyerQuestions!,
-        preferredCities: prev.buyerQuestions!.preferredCities.filter((c) => c !== city),
+        preferredCities: newCities,
       },
     }));
+    if (newCities.length > 0 && newCities.length <= 3) {
+      clearError('preferredCities');
+    }
   };
 
   const togglePropertyType = (type: string) => {
     const current = formData.buyerQuestions!.propertyTypes;
+    const newTypes = current.includes(type)
+      ? current.filter((t) => t !== type)
+      : [...current, type];
     setFormData((prev) => ({
       ...prev,
       buyerQuestions: {
         ...prev.buyerQuestions!,
-        propertyTypes: current.includes(type)
-          ? current.filter((t) => t !== type)
-          : [...current, type],
+        propertyTypes: newTypes,
       },
     }));
+    if (newTypes.length > 0) {
+      clearError('propertyTypes');
+    }
   };
 
   const formatCurrency = (value: number) => {
@@ -1008,15 +1071,16 @@ function Step3ABuyerQuestions({ formData, setFormData, errors, onNext, onBack }:
                   name="budgetRange"
                   value={range}
                   checked={formData.buyerQuestions!.budgetRange === range}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setFormData((prev) => ({
                       ...prev,
                       buyerQuestions: {
                         ...prev.buyerQuestions!,
                         budgetRange: e.target.value,
                       },
-                    }))
-                  }
+                    }));
+                    clearError('budgetRange');
+                  }}
                   className="w-4 h-4 text-primary-400 focus:ring-primary-400"
                 />
                 <span className="text-gray-900">{range}</span>
@@ -1064,12 +1128,15 @@ function Step3ABuyerQuestions({ formData, setFormData, errors, onNext, onBack }:
           </label>
           <select
             value={formData.buyerQuestions!.timeline}
-            onChange={(e) =>
+            onChange={(e) => {
               setFormData((prev) => ({
                 ...prev,
                 buyerQuestions: { ...prev.buyerQuestions!, timeline: e.target.value },
-              }))
-            }
+              }));
+              if (e.target.value) {
+                clearError('timeline');
+              }
+            }}
             className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
               errors.timeline ? 'border-red-500' : 'border-gray-300'
             }`}
@@ -1104,15 +1171,19 @@ function Step3ABuyerQuestions({ formData, setFormData, errors, onNext, onBack }:
                   name="preApproval"
                   value={option.value}
                   checked={formData.buyerQuestions!.preApprovalStatus === option.value}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setFormData((prev) => ({
                       ...prev,
                       buyerQuestions: {
                         ...prev.buyerQuestions!,
                         preApprovalStatus: e.target.value as any,
                       },
-                    }))
-                  }
+                    }));
+                    clearError('preApprovalStatus');
+                    if (e.target.value !== 'yes') {
+                      clearError('mortgageApprovedAmount');
+                    }
+                  }}
                   className="w-4 h-4 text-primary-400 focus:ring-primary-400"
                 />
                 <span className="text-gray-900">{option.label}</span>
@@ -1134,15 +1205,18 @@ function Step3ABuyerQuestions({ formData, setFormData, errors, onNext, onBack }:
               <input
                 type="text"
                 value={formData.buyerQuestions!.mortgageApprovedAmount}
-                onChange={(e) =>
+                onChange={(e) => {
                   setFormData((prev) => ({
                     ...prev,
                     buyerQuestions: {
                       ...prev.buyerQuestions!,
                       mortgageApprovedAmount: e.target.value,
                     },
-                  }))
-                }
+                  }));
+                  if (e.target.value.trim()) {
+                    clearError('mortgageApprovedAmount');
+                  }
+                }}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
                   errors.mortgageApprovedAmount ? 'border-red-500' : 'border-gray-300'
                 }`}
@@ -1164,12 +1238,13 @@ function Step3ABuyerQuestions({ formData, setFormData, errors, onNext, onBack }:
           </label>
           <div className="flex gap-3">
             <button
-              onClick={() =>
+              onClick={() => {
                 setFormData((prev) => ({
                   ...prev,
                   buyerQuestions: { ...prev.buyerQuestions!, isPrimaryResidence: true },
-                }))
-              }
+                }));
+                clearError('isPrimaryResidence');
+              }}
               className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
                 formData.buyerQuestions!.isPrimaryResidence === true
                   ? 'bg-primary-400 text-white'
@@ -1179,12 +1254,13 @@ function Step3ABuyerQuestions({ formData, setFormData, errors, onNext, onBack }:
               Yes
             </button>
             <button
-              onClick={() =>
+              onClick={() => {
                 setFormData((prev) => ({
                   ...prev,
                   buyerQuestions: { ...prev.buyerQuestions!, isPrimaryResidence: false },
-                }))
-              }
+                }));
+                clearError('isPrimaryResidence');
+              }}
               className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
                 formData.buyerQuestions!.isPrimaryResidence === false
                   ? 'bg-primary-400 text-white'
@@ -1223,9 +1299,19 @@ function Step3ABuyerQuestions({ formData, setFormData, errors, onNext, onBack }:
   );
 }
 
-function Step3BSellerQuestions({ formData, setFormData, errors, onNext, onBack }: StepProps) {
+function Step3BSellerQuestions({ formData, setFormData, errors, setErrors, onNext, onBack }: StepProps) {
   const [citySearch, setCitySearch] = useState('');
   const [showCityDropdown, setShowCityDropdown] = useState(false);
+
+  const clearError = (fieldName: string) => {
+    if (errors[fieldName]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
+  };
 
   const filteredCities = ONTARIO_CITIES.filter((city) =>
     city.toLowerCase().includes(citySearch.toLowerCase())
@@ -1252,12 +1338,13 @@ function Step3BSellerQuestions({ formData, setFormData, errors, onNext, onBack }
                   name="propertyType"
                   value={type}
                   checked={formData.sellerQuestions!.propertyType === type}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setFormData((prev) => ({
                       ...prev,
                       sellerQuestions: { ...prev.sellerQuestions!, propertyType: e.target.value },
-                    }))
-                  }
+                    }));
+                    clearError('propertyType');
+                  }}
                   className="w-4 h-4 text-primary-400 focus:ring-primary-400"
                 />
                 <span className="text-gray-900">{type}</span>
@@ -1308,6 +1395,7 @@ function Step3BSellerQuestions({ formData, setFormData, errors, onNext, onBack }
                       }));
                       setCitySearch('');
                       setShowCityDropdown(false);
+                      clearError('city');
                     }}
                     className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors"
                   >
@@ -1351,12 +1439,15 @@ function Step3BSellerQuestions({ formData, setFormData, errors, onNext, onBack }
           <input
             type="text"
             value={formData.sellerQuestions!.intersectionOrAddress}
-            onChange={(e) =>
+            onChange={(e) => {
               setFormData((prev) => ({
                 ...prev,
                 sellerQuestions: { ...prev.sellerQuestions!, intersectionOrAddress: e.target.value },
-              }))
-            }
+              }));
+              if (e.target.value.trim()) {
+                clearError('intersectionOrAddress');
+              }
+            }}
             className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
               errors.intersectionOrAddress ? 'border-red-500' : 'border-gray-300'
             }`}
@@ -1388,15 +1479,16 @@ function Step3BSellerQuestions({ formData, setFormData, errors, onNext, onBack }
                   name="priceExpectationRange"
                   value={range}
                   checked={formData.sellerQuestions!.priceExpectationRange === range}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setFormData((prev) => ({
                       ...prev,
                       sellerQuestions: {
                         ...prev.sellerQuestions!,
                         priceExpectationRange: e.target.value,
                       },
-                    }))
-                  }
+                    }));
+                    clearError('priceExpectationRange');
+                  }}
                   className="w-4 h-4 text-primary-400 focus:ring-primary-400"
                 />
                 <span className="text-gray-900">{range}</span>
@@ -1417,12 +1509,15 @@ function Step3BSellerQuestions({ formData, setFormData, errors, onNext, onBack }
           </label>
           <select
             value={formData.sellerQuestions!.sellingTimeline}
-            onChange={(e) =>
+            onChange={(e) => {
               setFormData((prev) => ({
                 ...prev,
                 sellerQuestions: { ...prev.sellerQuestions!, sellingTimeline: e.target.value },
-              }))
-            }
+              }));
+              if (e.target.value) {
+                clearError('sellingTimeline');
+              }
+            }}
             className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
               errors.sellingTimeline ? 'border-red-500' : 'border-gray-300'
             }`}
@@ -1447,12 +1542,15 @@ function Step3BSellerQuestions({ formData, setFormData, errors, onNext, onBack }
           </label>
           <select
             value={formData.sellerQuestions!.sellingReason}
-            onChange={(e) =>
+            onChange={(e) => {
               setFormData((prev) => ({
                 ...prev,
                 sellerQuestions: { ...prev.sellerQuestions!, sellingReason: e.target.value },
-              }))
-            }
+              }));
+              if (e.target.value) {
+                clearError('sellingReason');
+              }
+            }}
             className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
               errors.sellingReason ? 'border-red-500' : 'border-gray-300'
             }`}
@@ -1478,12 +1576,15 @@ function Step3BSellerQuestions({ formData, setFormData, errors, onNext, onBack }
           </label>
           <select
             value={formData.sellerQuestions!.propertyCondition}
-            onChange={(e) =>
+            onChange={(e) => {
               setFormData((prev) => ({
                 ...prev,
                 sellerQuestions: { ...prev.sellerQuestions!, propertyCondition: e.target.value },
-              }))
-            }
+              }));
+              if (e.target.value) {
+                clearError('propertyCondition');
+              }
+            }}
             className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-100 focus:border-primary-400 ${
               errors.propertyCondition ? 'border-red-500' : 'border-gray-300'
             }`}
@@ -1545,11 +1646,21 @@ function Step3BSellerQuestions({ formData, setFormData, errors, onNext, onBack }
   );
 }
 
-function Step3CCombinedQuestions({ formData, setFormData, errors, onNext, onBack }: StepProps) {
+function Step3CCombinedQuestions({ formData, setFormData, errors, setErrors, onNext, onBack }: StepProps) {
   const [buyerCitySearch, setBuyerCitySearch] = useState('');
   const [showBuyerCityDropdown, setShowBuyerCityDropdown] = useState(false);
   const [sellerCitySearch, setSellerCitySearch] = useState('');
   const [showSellerCityDropdown, setShowSellerCityDropdown] = useState(false);
+
+  const clearError = (fieldName: string) => {
+    if (errors[fieldName]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
+  };
 
   const filteredBuyerCities = ONTARIO_CITIES.filter(
     (city) =>
@@ -2172,7 +2283,17 @@ interface Step4Props extends StepProps {
   goToStep: (step: number) => void;
 }
 
-function Step4Review({ formData, setFormData, errors, onSubmit, onBack, goToStep }: Step4Props) {
+function Step4Review({ formData, setFormData, errors, setErrors, onSubmit, onBack, goToStep }: Step4Props) {
+  const clearError = (fieldName: string) => {
+    if (errors[fieldName]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-CA', {
       style: 'currency',
@@ -2419,12 +2540,13 @@ function Step4Review({ formData, setFormData, errors, onSubmit, onBack, goToStep
                       name="contactPreference"
                       value={option.value}
                       checked={formData.consent.contactPreference === option.value}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setFormData((prev) => ({
                           ...prev,
                           consent: { ...prev.consent, contactPreference: e.target.value as any },
-                        }))
-                      }
+                        }));
+                        clearError('contactPreference');
+                      }}
                       className="w-4 h-4 text-primary-400 focus:ring-primary-400"
                     />
                     <span className="text-gray-900">{option.label}</span>
@@ -2469,12 +2591,15 @@ function Step4Review({ formData, setFormData, errors, onSubmit, onBack, goToStep
                 <input
                   type="checkbox"
                   checked={formData.consent.communicationConsent}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setFormData((prev) => ({
                       ...prev,
                       consent: { ...prev.consent, communicationConsent: e.target.checked },
-                    }))
-                  }
+                    }));
+                    if (e.target.checked) {
+                      clearError('communicationConsent');
+                    }
+                  }}
                   className="w-5 h-5 text-primary-400 focus:ring-primary-400 mt-0.5"
                 />
                 <div className="text-sm">
@@ -2537,12 +2662,15 @@ function Step4Review({ formData, setFormData, errors, onSubmit, onBack, goToStep
                 <input
                   type="checkbox"
                   checked={formData.consent.termsAccepted}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setFormData((prev) => ({
                       ...prev,
                       consent: { ...prev.consent, termsAccepted: e.target.checked },
-                    }))
-                  }
+                    }));
+                    if (e.target.checked) {
+                      clearError('termsAccepted');
+                    }
+                  }}
                   className="w-5 h-5 text-primary-400 focus:ring-primary-400 mt-0.5"
                 />
                 <div className="text-sm">
