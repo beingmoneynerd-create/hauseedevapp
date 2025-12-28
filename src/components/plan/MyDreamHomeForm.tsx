@@ -439,7 +439,7 @@ export default function MyDreamHomeForm() {
               disabled={formData.preferredCities.length >= 3}
             />
             {showCityDropdown && (citySearch.trim() || filteredCities.length > 0) && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-y-auto">
                 {citySearch.trim() && !ONTARIO_CITIES.some(c => c.toLowerCase() === citySearch.toLowerCase()) && (
                   <button
                     key="custom"
