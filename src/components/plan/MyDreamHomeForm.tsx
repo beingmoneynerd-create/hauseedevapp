@@ -302,7 +302,7 @@ export default function MyDreamHomeForm() {
             <select
               value={formData.bedrooms || ''}
               onChange={(e) => updateField('bedrooms', e.target.value || null)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
             >
               <option value="">Select...</option>
               <option value="1">1</option>
@@ -320,7 +320,7 @@ export default function MyDreamHomeForm() {
             <select
               value={formData.bathrooms || ''}
               onChange={(e) => updateField('bathrooms', e.target.value || null)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
             >
               <option value="">Select...</option>
               <option value="1">1</option>
@@ -381,7 +381,7 @@ export default function MyDreamHomeForm() {
           <select
             value={formData.timeline || ''}
             onChange={(e) => updateField('timeline', e.target.value || null)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent"
           >
             <option value="">Select...</option>
             <option value="0-6 months">0-6 months</option>
