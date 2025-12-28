@@ -392,7 +392,7 @@ export interface Home {
   userId: string;
   workspaceId: string;
   address: string;
-  neighborhood: string;
+  neighborhood?: string;
   price: number;
   bedrooms: number;
   bathrooms: number;
@@ -411,7 +411,7 @@ export interface Home {
 
 export interface AddHomeFormData {
   address: string;
-  neighborhood: string;
+  neighborhood?: string;
   price: number;
   bedrooms: number;
   bathrooms: number;

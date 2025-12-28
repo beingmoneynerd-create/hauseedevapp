@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Plus, Home as HomeIcon, Heart, X, Mountain, Printer } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Home as HomeIcon, Heart, X, Mountain, Printer, ChevronDown } from 'lucide-react';
 import { EvaluateTabType, Home, AddHomeFormData } from '../types';
 import { loadHomes, addHome, updateHome } from '../lib/supabaseClient';
 import InspectionView from '../components/inspection/InspectionView';
@@ -379,6 +379,24 @@ interface AddHomeModalProps {
   onSubmit: (formData: AddHomeFormData) => void;
 }
 
+const BEDROOM_OPTIONS = [
+  { label: '1', value: 1 },
+  { label: '2', value: 2 },
+  { label: '3', value: 3 },
+  { label: '4', value: 4 },
+  { label: '5+', value: 5 },
+];
+
+const BATHROOM_OPTIONS = [
+  { label: '1', value: 1 },
+  { label: '1.5', value: 1.5 },
+  { label: '2', value: 2 },
+  { label: '2.5', value: 2.5 },
+  { label: '3', value: 3 },
+  { label: '3.5', value: 3.5 },
+  { label: '4+', value: 4 },
+];
+
 function AddHomeModal({ onClose, onSubmit }: AddHomeModalProps) {
   const [formData, setFormData] = useState<AddHomeFormData>({
     address: '',
@@ -393,7 +411,7 @@ function AddHomeModal({ onClose, onSubmit }: AddHomeModalProps) {
 
   const [errors, setErrors] = useState<Partial<Record<keyof AddHomeFormData, string>>>({});
 
-  const handleChange = (field: keyof AddHomeFormData, value: string | number) => {
+  const handleChange = (field: keyof AddHomeFormData, value: string | number | undefined) => {
     setFormData({ ...formData, [field]: value });
     if (errors[field]) {
       setErrors({ ...errors, [field]: undefined });
@@ -404,10 +422,9 @@ function AddHomeModal({ onClose, onSubmit }: AddHomeModalProps) {
     const newErrors: Partial<Record<keyof AddHomeFormData, string>> = {};
 
     if (!formData.address.trim()) newErrors.address = 'Address is required';
-    if (!formData.neighborhood.trim()) newErrors.neighborhood = 'Neighborhood is required';
     if (formData.price <= 0) newErrors.price = 'Price must be greater than 0';
-    if (formData.bedrooms <= 0) newErrors.bedrooms = 'Bedrooms must be greater than 0';
-    if (formData.bathrooms <= 0) newErrors.bathrooms = 'Bathrooms must be greater than 0';
+    if (formData.bedrooms <= 0) newErrors.bedrooms = 'Bedrooms is required';
+    if (formData.bathrooms <= 0) newErrors.bathrooms = 'Bathrooms is required';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -422,7 +439,6 @@ function AddHomeModal({ onClose, onSubmit }: AddHomeModalProps) {
 
   const isValid =
     formData.address.trim() &&
-    formData.neighborhood.trim() &&
     formData.price > 0 &&
     formData.bedrooms > 0 &&
     formData.bathrooms > 0;
@@ -462,22 +478,15 @@ function AddHomeModal({ onClose, onSubmit }: AddHomeModalProps) {
 
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Neighborhood <span className="text-primary-400">*</span>
+                Neighborhood
               </label>
               <input
                 type="text"
-                value={formData.neighborhood}
-                onChange={(e) => handleChange('neighborhood', e.target.value)}
-                className={`w-full h-12 px-4 border rounded-md focus:ring-2 transition-colors ${
-                  errors.neighborhood
-                    ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
-                    : 'border-gray-300 focus:border-primary-400 focus:ring-primary-100'
-                }`}
+                value={formData.neighborhood || ''}
+                onChange={(e) => handleChange('neighborhood', e.target.value || undefined)}
+                className="w-full h-12 px-4 border border-gray-300 rounded-md focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-colors"
                 placeholder="Downtown Toronto"
               />
-              {errors.neighborhood && (
-                <p className="text-red-500 text-sm mt-1">{errors.neighborhood}</p>
-              )}
             </div>
 
             <div>
@@ -502,17 +511,25 @@ function AddHomeModal({ onClose, onSubmit }: AddHomeModalProps) {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Bedrooms <span className="text-primary-400">*</span>
               </label>
-              <input
-                type="number"
-                value={formData.bedrooms || ''}
-                onChange={(e) => handleChange('bedrooms', parseInt(e.target.value) || 0)}
-                className={`w-full h-12 px-4 border rounded-md focus:ring-2 transition-colors ${
-                  errors.bedrooms
-                    ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
-                    : 'border-gray-300 focus:border-primary-400 focus:ring-primary-100'
-                }`}
-                placeholder="3"
-              />
+              <div className="relative">
+                <select
+                  value={formData.bedrooms || ''}
+                  onChange={(e) => handleChange('bedrooms', parseFloat(e.target.value) || 0)}
+                  className={`w-full h-12 px-4 pr-10 border rounded-md focus:ring-2 transition-colors appearance-none bg-white ${
+                    errors.bedrooms
+                      ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
+                      : 'border-gray-300 focus:border-primary-400 focus:ring-primary-100'
+                  }`}
+                >
+                  <option value="">Select...</option>
+                  {BEDROOM_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+              </div>
               {errors.bedrooms && <p className="text-red-500 text-sm mt-1">{errors.bedrooms}</p>}
             </div>
 
@@ -520,18 +537,25 @@ function AddHomeModal({ onClose, onSubmit }: AddHomeModalProps) {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Bathrooms <span className="text-primary-400">*</span>
               </label>
-              <input
-                type="number"
-                step="0.5"
-                value={formData.bathrooms || ''}
-                onChange={(e) => handleChange('bathrooms', parseFloat(e.target.value) || 0)}
-                className={`w-full h-12 px-4 border rounded-md focus:ring-2 transition-colors ${
-                  errors.bathrooms
-                    ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
-                    : 'border-gray-300 focus:border-primary-400 focus:ring-primary-100'
-                }`}
-                placeholder="2"
-              />
+              <div className="relative">
+                <select
+                  value={formData.bathrooms || ''}
+                  onChange={(e) => handleChange('bathrooms', parseFloat(e.target.value) || 0)}
+                  className={`w-full h-12 px-4 pr-10 border rounded-md focus:ring-2 transition-colors appearance-none bg-white ${
+                    errors.bathrooms
+                      ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
+                      : 'border-gray-300 focus:border-primary-400 focus:ring-primary-100'
+                  }`}
+                >
+                  <option value="">Select...</option>
+                  {BATHROOM_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+              </div>
               {errors.bathrooms && <p className="text-red-500 text-sm mt-1">{errors.bathrooms}</p>}
             </div>
 
