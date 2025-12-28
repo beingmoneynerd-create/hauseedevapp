@@ -14,31 +14,8 @@ import {
   X,
   Edit,
 } from 'lucide-react';
-import { SelectFormData } from '../../types';
+import { SelectFormData, ONTARIO_CITIES } from '../../types';
 import { supabase } from '../../lib/supabaseClient';
-
-const ONTARIO_CITIES = [
-  'Toronto',
-  'Ottawa',
-  'Mississauga',
-  'Brampton',
-  'Hamilton',
-  'London',
-  'Markham',
-  'Vaughan',
-  'Kitchener',
-  'Windsor',
-  'Richmond Hill',
-  'Oakville',
-  'Burlington',
-  'Greater Sudbury',
-  'Oshawa',
-  'Barrie',
-  'St. Catharines',
-  'Cambridge',
-  'Kingston',
-  'Guelph',
-];
 
 const PROPERTY_TYPES = ['Condo', 'Townhouse', 'Semi-Detached', 'Detached', 'Multi-Unit'];
 
