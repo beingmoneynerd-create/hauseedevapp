@@ -367,7 +367,7 @@ export default function MyDreamHomeForm() {
             <div className="border-l-4 border-primary-400 pl-4 py-2">
               <h3 className="font-semibold text-gray-900 mb-2">Lifestyle Priorities</h3>
               <div className="text-gray-700 space-y-1 text-sm">
-                {formData.maxCommute && formData.maxCommute !== 'not-a-factor' && <p>Max commute: {formData.maxCommute} minutes</p>}
+                {formData.maxCommute && formData.maxCommute !== 'not-a-factor' && <p>Max commute to work: {formData.maxCommute} minutes</p>}
                 {formData.schoolProximityImportance && <p>School proximity: {formData.schoolProximityImportance}</p>}
                 {formData.walkabilityImportance && <p>Walkability: {formData.walkabilityImportance}</p>}
                 {formData.neighborhoodVibe && formData.neighborhoodVibe !== 'no-preference' && <p>Neighborhood vibe: {formData.neighborhoodVibe}</p>}
@@ -595,7 +595,7 @@ export default function MyDreamHomeForm() {
         >
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Max Commute
+              Max Commute to Work
             </label>
             <CustomSelect
               value={formData.maxCommute}
